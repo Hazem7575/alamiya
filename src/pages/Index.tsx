@@ -64,6 +64,7 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     city: backendEvent.city?.name || 'Unknown',
     venue: backendEvent.venue?.name || 'Unknown',
     ob: backendEvent.observer?.code || 'Unknown',
+    sng: backendEvent.sng?.code || '',
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };
@@ -88,6 +89,7 @@ const convertFrontendToBackendEvent = (frontendEvent: Event): BackendEvent => {
     teams: [],
     metadata: [],
     created_at: frontendEvent.createdAt,
+    sng_id: parseInt(frontendEvent.sng),
     updated_at: frontendEvent.updatedAt,
     event_type: { id: 0, name: frontendEvent.eventType },
     city: { id: 0, name: frontendEvent.city },
@@ -129,6 +131,14 @@ const convertEventForUpdate = (event: Event, dashboardData?: any) => {
     if (observer) {
       data.observer_id = observer.id;
     }
+
+    // Find sng ID
+    if (event.sng) {
+      const sng = dashboardData.sngs?.find((s: any) => s.name === event.sng);
+      if (sng) {
+        data.sng_id = sng.id;
+      }
+    }
   }
 
   return data;
@@ -152,6 +162,7 @@ const Index = () => {
     eventTypes: [] as string[],
     cities: [] as string[],
     observers: [] as string[],
+    sngs: [] as string[],
     dateRange: null as any
   });
   
@@ -201,6 +212,7 @@ const Index = () => {
     eventTypes: filters.eventTypes.length > 0 ? filters.eventTypes : undefined,
     cities: filters.cities.length > 0 ? filters.cities : undefined,
     observers: filters.observers.length > 0 ? filters.observers : undefined,
+    sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
     dateRange: filters.dateRange ? {
       from: format(filters.dateRange.from, 'yyyy-MM-dd'),
       to: filters.dateRange.to ? format(filters.dateRange.to, 'yyyy-MM-dd') : format(filters.dateRange.from, 'yyyy-MM-dd')
@@ -457,7 +469,7 @@ const Index = () => {
     
     const currentData = queryClient.getQueryData(queryKey);
     let originalData = currentData; // Save for rollback
-    
+
     if (currentData && (currentData as any).success) {
       const optimisticData = JSON.parse(JSON.stringify(currentData)); // Deep copy
       optimisticData.data.data = optimisticData.data.data.map((event: any) => 
@@ -465,7 +477,8 @@ const Index = () => {
           ? convertFrontendToBackendEvent(updatedEvent)
           : event
       );
-      
+
+
       // Apply optimistic update IMMEDIATELY - user sees change now!
       queryClient.setQueryData(queryKey, optimisticData);
     }
@@ -481,7 +494,7 @@ const Index = () => {
       toast({
         title: "Event Updated",
         description: "Changes saved successfully",
-        className: "text-white",
+
       });
       
     } catch (error: any) {
@@ -507,12 +520,8 @@ const Index = () => {
           duration: 5000,
         });
       } else {
-        // Generic error message - clean up any Arabic text
-        let errorMessage = errorData?.message || "Failed to update event";
-        // If message contains Arabic or is too long, use simple English message
-        if (errorMessage.length > 100 || /[\u0600-\u06FF]/.test(errorMessage)) {
-          errorMessage = "Failed to update event";
-        }
+        let errorMessage = errorData?.message;
+
         toast({
           title: "Update Failed", 
           description: errorMessage,
@@ -557,6 +566,12 @@ const Index = () => {
 
   const handleObserverFilter = (observers: string[]) => {
     setFilters(prev => ({ ...prev, observers }));
+    setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page on filter
+    hasFiltered.current = true;
+  };
+
+  const handleSngFilter = (sngs: string[]) => {
+    setFilters(prev => ({ ...prev, sngs }));
     setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page on filter
     hasFiltered.current = true;
   };
@@ -629,6 +644,7 @@ const Index = () => {
             cities={dashboardData?.cities || []}
             venues={dashboardData?.venues || []}
             observers={dashboardData?.observers || []}
+            sngs={dashboardData?.sngs || []}
             onDeleteEvents={handleDeleteEvents}
             onEditEvent={handleEditEvent}
             onUpdateEvent={handleUpdateEvent}
@@ -640,6 +656,7 @@ const Index = () => {
             onEventTypeFilter={handleEventTypeFilter}
             onCityFilter={handleCityFilter}
             onObserverFilter={handleObserverFilter}
+            onSngFilter={handleSngFilter}
             onDateRangeFilter={handleDateRangeFilter}
             // Sort props - now triggers backend queries
             sorting={sorting}

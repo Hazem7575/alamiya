@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             CitySeeder::class,
             EventTypeSeeder::class,
             ObserverSeeder::class,
+            SngSeeder::class,
             // VenueSeeder::class, // سيتم إضافته لاحقاً
             // UserSeeder::class, // سيتم إضافته لاحقاً
         ]);

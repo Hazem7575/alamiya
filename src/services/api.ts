@@ -49,6 +49,7 @@ export interface BackendEvent {
   city_id: number;
   venue_id: number;
   observer_id: number;
+  sng_id?: number;
   created_by: number;
   description?: string;
   status: string;
@@ -61,6 +62,7 @@ export interface BackendEvent {
   city?: { id: number; name: string; };
   venue?: { id: number; name: string; };
   observer?: { id: number; code: string; };
+  sng?: { id: number; code: string; };
   creator?: { id: number; name: string; };
 }
 
@@ -72,6 +74,7 @@ export interface CreateEventRequest {
   city_id: number;
   venue_id: number;
   observer_id: number;
+  sng_id?: number;
   description?: string;
   teams?: string[];
   metadata?: any;
@@ -95,7 +98,8 @@ export interface EventsResponse {
 
 
 
-const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
+//const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 class ApiClient {
   private getAuthHeaders(): Record<string, string> {
@@ -301,6 +305,9 @@ class ApiClient {
       if (filters.observers && filters.observers.length > 0) {
         url += `&observers=${filters.observers.join(',')}`;
       }
+      if (filters.sngs && filters.sngs.length > 0) {
+        url += `&sngs=${filters.sngs.join(',')}`;
+      }
       if (filters.dateRange && filters.dateRange.from && filters.dateRange.to) {
         url += `&date_from=${filters.dateRange.from}&date_to=${filters.dateRange.to}`;
       }
@@ -378,6 +385,7 @@ class ApiClient {
     cities: any[];
     venues: any[];
     observers: any[];
+    sngs: any[];
   }>> {
     return this.fetchApi('/dashboard/data');
   }
@@ -458,6 +466,31 @@ class ApiClient {
 
   async deleteObserver(id: number): Promise<ApiResponse<void>> {
     return this.fetchApi(`/observers/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // SNG CRUD operations
+  async getSngs(): Promise<ApiResponse<Array<{ id: number; name: string; }>>> {
+    return this.fetchApi('/sngs');
+  }
+
+  async createSng(data: { code: string }): Promise<ApiResponse<{ id: number; code: string; name: string; }>> {
+    return this.fetchApi('/sngs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSng(id: number, data: { code: string }): Promise<ApiResponse<{ id: number; code: string; name: string; }>> {
+    return this.fetchApi(`/sngs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSng(id: number): Promise<ApiResponse<void>> {
+    return this.fetchApi(`/sngs/${id}`, {
       method: 'DELETE',
     });
   }

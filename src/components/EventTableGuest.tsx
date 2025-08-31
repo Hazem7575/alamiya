@@ -241,6 +241,16 @@ export function EventTableGuest({
       ),
       size: 100,
     },
+    {
+      header: "SNG",
+      accessorKey: "sng",
+      cell: ({ row }) => (
+        <div className="text-sm">
+          {row.getValue("sng")}
+        </div>
+      ),
+      size: 100,
+    },
   ];
 
   // No need to sync with parent - using local filtering only

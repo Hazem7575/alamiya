@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Calendar, MapPin, Building2, User, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, MapPin, Building2, User, Clock, X, Video } from 'lucide-react';
 import { format } from 'date-fns';
 import { Event } from '@/types';
 import { getEventTypeBadgeVariant } from '@/lib/utils';
@@ -22,16 +23,26 @@ export function EventPopup({ event, open, onOpenChange }: EventPopupProps) {
       <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 shadow-elegant">
         <Card className="border-0  shadow-none">
           <div className=" p-6 bg-black text-white" style={{ marginTop: '-1px'}}>
-            <div className="flex  items-center gap-3 mb-2">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Calendar className="h-5 w-5" />
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <Badge 
+                  variant={getEventTypeBadgeVariant(event.eventType)} 
+                  className="bg-white/20 text-white border-white/30"
+                >
+                  {event.eventType}
+                </Badge>
               </div>
-              <Badge 
-                variant={getEventTypeBadgeVariant(event.eventType)} 
-                className="bg-white/20 text-white border-white/30"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8 p-0 border-white/30 text-white hover:bg-white/20"
               >
-                {event.eventType}
-              </Badge>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-white text-left">
@@ -69,6 +80,13 @@ export function EventPopup({ event, open, onOpenChange }: EventPopupProps) {
               <User className="h-4 w-4" />
               <span>OB: {event.ob}</span>
             </div>
+            
+            {event.sng && (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Video className="h-4 w-4" />
+                <span>SNG: {event.sng}</span>
+              </div>
+            )}
             
             {event.createdAt && (
               <div className="pt-4 border-t border-border">

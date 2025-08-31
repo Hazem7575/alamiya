@@ -9,6 +9,7 @@ use App\Models\City;
 use App\Models\CityDistance;
 use App\Models\Venue;
 use App\Models\Observer;
+use App\Models\Sng;
 use App\Models\ActivityLog;
 use App\Http\Resources\EventResource;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class EventController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'creator']);
+        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
 
         // Filter by date range
         if ($request->has('start_date') && $request->has('end_date')) {
@@ -91,6 +92,14 @@ class EventController extends Controller
             });
         }
 
+        // Filter by SNGs
+        if ($request->has('sngs') && !empty($request->sngs)) {
+            $sngs = explode(',', $request->sngs);
+            $query->whereHas('sng', function ($q) use ($sngs) {
+                $q->whereIn('code', $sngs);
+            });
+        }
+
         // Filter by date range
         if ($request->has('date_from') && $request->has('date_to')) {
             $query->whereBetween('event_date', [$request->date_from, $request->date_to]);
@@ -135,6 +144,11 @@ class EventController extends Controller
                           ->orderBy('observers.code', $sortDirection)
                           ->select('events.*');
                     break;
+                case 'sng':
+                    $query->join('sngs', 'events.sng_id', '=', 'sngs.id')
+                          ->orderBy('sngs.code', $sortDirection)
+                          ->select('events.*');
+                    break;
                 default:
                     $query->orderBy('event_date', 'desc')
                           ->orderBy('event_time', 'desc');
@@ -145,7 +159,7 @@ class EventController extends Controller
                   ->orderBy('event_time', 'desc');
         }
 
-        $events = $query->paginate($perPage);
+        $events = $query->with(['eventType', 'city', 'venue', 'observer', 'sng', 'creator'])->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -178,6 +192,7 @@ class EventController extends Controller
                 'city' => 'required|string',
                 'venue' => 'required|string',
                 'observer' => 'required|string',
+                'sng' => 'nullable|string',
                 'description' => 'nullable|string',
                 'teams' => 'nullable|array',
                 'metadata' => 'nullable|array'
@@ -201,6 +216,12 @@ class EventController extends Controller
             // Find or create observer
             $observer = Observer::firstOrCreate(['code' => $validated['observer']]);
 
+            // Find or create SNG
+            $sng = null;
+            if (!empty($validated['sng'])) {
+                $sng = Sng::firstOrCreate(['code' => $validated['sng']]);
+            }
+
             // Check OB conflicts before creating
             $obConflictValidation = $this->validateObserverConflict(
                 $observer->id,
@@ -218,6 +239,25 @@ class EventController extends Controller
                 ], 422);
             }
 
+            // Check SNG conflicts before creating (if SNG is provided)
+            if ($sng) {
+                $sngConflictValidation = $this->validateSngConflict(
+                    $sng->id,
+                    $validated['event_date'],
+                    $validated['event_time'],
+                    $city->id
+                );
+
+                if (!$sngConflictValidation['valid']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $sngConflictValidation['message'],
+                        'error_type' => 'sng_conflict',
+                        'details' => $sngConflictValidation['details']
+                    ], 422);
+                }
+            }
+
             // Create event with IDs
             $event = Event::create([
                 'title' => $validated['title'],
@@ -228,12 +268,13 @@ class EventController extends Controller
                 'city_id' => $city->id,
                 'venue_id' => $venue->id,
                 'observer_id' => $observer->id,
+                'sng_id' => $sng?->id,
                 'created_by' => auth()->id(),
                 'teams' => $validated['teams'] ?? [],
                 'metadata' => $validated['metadata'] ?? []
             ]);
 
-            $event->load(['eventType', 'city', 'venue', 'observer', 'creator']);
+            $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
             ActivityLog::logActivity('created', $event, null, $validated);
 
             return response()->json([
@@ -261,7 +302,7 @@ class EventController extends Controller
 
     public function show(Event $event): JsonResponse
     {
-        $event->load(['eventType', 'city', 'venue', 'observer', 'creator']);
+        $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
 
         return response()->json([
             'success' => true,
@@ -280,6 +321,7 @@ class EventController extends Controller
             'event_type_id' => 'sometimes|exists:event_types,id',
             'city_id' => 'sometimes|exists:cities,id',
             'venue_id' => 'sometimes|exists:venues,id',
+            'sng_id' => 'sometimes|exists:sngs,id',
             'observer_id' => 'nullable|exists:observers,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:scheduled,ongoing,completed,cancelled,postponed',
@@ -294,7 +336,8 @@ class EventController extends Controller
                 $validated['event_date'] ?? $event->event_date,
                 $validated['event_time'] ?? $event->event_time,
                 $validated['observer_id'] ?? $event->observer_id,
-                $event->id
+                $event->id,
+                $validated['sng_id'] ?? $event->sng_id
             );
 
             if (!$travelTimeValidation['valid']) {
@@ -327,8 +370,31 @@ class EventController extends Controller
             }
         }
 
+        // Check SNG conflicts even if city didn't change (in case sng or time changed)
+        if (isset($validated['sng_id']) || isset($validated['event_time']) || isset($validated['event_date'])) {
+            $sngId = $validated['sng_id'] ?? $event->sng_id;
+            if ($sngId) {
+                $sngConflictValidation = $this->validateSngConflict(
+                    $sngId,
+                    $validated['event_date'] ?? $event->event_date,
+                    $validated['event_time'] ?? $event->event_time,
+                    $validated['city_id'] ?? $event->city_id,
+                    $event->id
+                );
+
+                if (!$sngConflictValidation['valid']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $sngConflictValidation['message'],
+                        'error_type' => 'sng_conflict',
+                        'details' => $sngConflictValidation['details']
+                    ], 422);
+                }
+            }
+        }
+
         $event->update($validated);
-        $event->load(['eventType', 'city', 'venue', 'observer', 'creator']);
+        $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
 
         ActivityLog::logActivity('updated', $event, $oldValues, $validated);
 
@@ -342,7 +408,7 @@ class EventController extends Controller
     /**
      * Validate if there's enough time to travel between cities and OB availability
      */
-    private function validateTravelTime($oldCityId, $newCityId, $eventDate, $eventTime, $observerId = null, $currentEventId = null): array
+    private function validateTravelTime($oldCityId, $newCityId, $eventDate, $eventTime, $observerId = null, $currentEventId = null, $sngId = null): array
     {
         try {
             $eventDateTime = Carbon::parse($eventDate . ' ' . $eventTime);
@@ -371,21 +437,37 @@ class EventController extends Controller
                 if (!$obConflictValidation['valid']) {
                     return $obConflictValidation;
                 }
-
-                return [
-                    'valid' => true,
-                    'message' => sprintf(
-                        'Observer is available for travel from %s to %s',
-                        $oldCity->name,
-                        $newCity->name
-                    ),
-                    'details' => [
-                        'old_city' => $oldCity->name,
-                        'new_city' => $newCity->name,
-                        'observer_available' => true
-                    ]
-                ];
             }
+
+            // ✅ التحقق من تعارض الـ SNG مع الأحداث الأخرى مباشرة
+            if ($sngId) {
+                $sngConflictValidation = $this->validateSngConflict(
+                    $sngId,
+                    $eventDate,
+                    $eventTime,
+                    $newCityId,
+                    $currentEventId
+                );
+
+                if (!$sngConflictValidation['valid']) {
+                    return $sngConflictValidation;
+                }
+            }
+
+            return [
+                'valid' => true,
+                'message' => sprintf(
+                    'Resources are available for travel from %s to %s',
+                    $oldCity->name,
+                    $newCity->name
+                ),
+                'details' => [
+                    'old_city' => $oldCity->name,
+                    'new_city' => $newCity->name,
+                    'observer_available' => $observerId ? true : false,
+                    'sng_available' => $sngId ? true : false
+                ]
+            ];
 
             // If no observer specified, just validate basic city change
             return [
@@ -478,7 +560,7 @@ class EventController extends Controller
     // Public methods for guest access
     public function publicIndex(Request $request): JsonResponse
     {
-        $query = Event::with(['eventType', 'city', 'venue', 'observer'])
+        $query = Event::with(['eventType', 'city', 'venue', 'observer' , 'sng'])
             ->where('status', 'scheduled'); // Only show scheduled events for guests
 
         // Filter by date range
@@ -586,6 +668,11 @@ class EventController extends Controller
                           ->orderBy('observers.code', $sortDirection)
                           ->select('events.*');
                     break;
+                case 'sng':
+                    $query->join('sngs', 'events.sng_id', '=', 'sngs.id')
+                          ->orderBy('sngs.code', $sortDirection)
+                          ->select('events.*');
+                    break;
                 default:
                     $query->orderBy('event_date', 'desc')
                           ->orderBy('event_time', 'desc');
@@ -677,6 +764,164 @@ class EventController extends Controller
             } catch (\Exception $e2) {
                 throw new \Exception("Could not parse event date/time: {$eventDate} / {$eventTime}. Error: {$e2->getMessage()}");
             }
+        }
+    }
+
+    /**
+     * Validate if SNG is available and can travel between events
+     */
+    private function validateSngConflict($sngId, $eventDate, $eventTime, $cityId, $currentEventId = null): array
+    {
+        try {
+            // ✅ Safe parsing: Handle both date/time formats
+            $eventDateTime = $this->parseEventDateTime($eventDate, $eventTime);
+
+            // Get SNG's events on the same day (excluding current event if updating)
+            // Extract date part safely in case eventDate contains datetime
+            $dateOnly = strpos($eventDate, ' ') !== false ?
+                Carbon::parse($eventDate)->format('Y-m-d') :
+                $eventDate;
+
+            $query = Event::where('sng_id', $sngId)
+                ->whereDate('event_date', $dateOnly);
+
+            if ($currentEventId) {
+                $query->where('id', '!=', $currentEventId);
+            }
+
+            $sngEvents = $query->with(['city'])
+                ->orderBy('event_time')
+                ->get();
+
+            if ($sngEvents->isEmpty()) {
+                return [
+                    'valid' => true,
+                    'message' => 'SNG is available - no conflicts found'
+                ];
+            }
+
+            // Check for direct time conflicts (same time)
+            foreach ($sngEvents as $existingEvent) {
+                $existingDateTime = $this->parseEventDateTime($existingEvent->event_date, $existingEvent->event_time);
+
+                // Check if events are at exactly the same time
+                if ($eventDateTime->equalTo($existingDateTime)) {
+                    return [
+                        'valid' => false,
+                        'message' => sprintf(
+                            'SNG conflict: SNG is already assigned to "%s" at the same time (%s)',
+                            $existingEvent->title,
+                            $eventDateTime->format('Y-m-d H:i')
+                        ),
+                        'details' => [
+                            'conflict_event' => $existingEvent->title,
+                            'conflict_city' => $existingEvent->city->name,
+                            'conflict_time' => $existingDateTime->format('Y-m-d H:i'),
+                            'error_type' => 'exact_time_conflict'
+                        ]
+                    ];
+                }
+            }
+
+            // Check travel time conflicts - SNG needs time to move between cities
+            foreach ($sngEvents as $existingEvent) {
+                $existingDateTime = $this->parseEventDateTime($existingEvent->event_date, $existingEvent->event_time);
+                $existingCityId = $existingEvent->city_id;
+
+                // Skip if same city (no travel required)
+                if ($existingCityId == $cityId) {
+                    continue;
+                }
+
+                // Get travel time between cities
+                $travelTime = CityDistance::where(function ($query) use ($existingCityId, $cityId) {
+                    $query->where('from_city_id', $existingCityId)
+                          ->where('to_city_id', $cityId);
+                })->orWhere(function ($query) use ($existingCityId, $cityId) {
+                    $query->where('from_city_id', $cityId)
+                          ->where('to_city_id', $existingCityId);
+                })->first();
+
+                if (!$travelTime) {
+                    // No travel time configured - issue warning but allow
+                    continue;
+                }
+
+                $requiredTravelHours = $travelTime->travel_time_hours;
+
+                // Check if new event is after existing event
+                if ($eventDateTime->greaterThan($existingDateTime)) {
+                    $timeBetween = $existingDateTime->diffInHours($eventDateTime, false);
+
+                    if ($timeBetween < $requiredTravelHours) {
+                        return [
+                            'valid' => false,
+                            'message' => sprintf(
+                                'SNG travel conflict: SNG cannot travel from %s (%s) to %s in time. Required: %.1f hours, Available: %.1f hours',
+                                $existingEvent->city->name,
+                                $existingDateTime->format('H:i'),
+                                City::find($cityId)->name,
+                                $requiredTravelHours,
+                                $timeBetween
+                            ),
+                            'details' => [
+                                'previous_event' => $existingEvent->title,
+                                'previous_city' => $existingEvent->city->name,
+                                'previous_time' => $existingDateTime->format('Y-m-d H:i'),
+                                'new_city' => City::find($cityId)->name,
+                                'new_time' => $eventDateTime->format('Y-m-d H:i'),
+                                'required_travel_hours' => $requiredTravelHours,
+                                'available_hours' => round($timeBetween, 1),
+                                'shortage_hours' => round($requiredTravelHours - $timeBetween, 1),
+                                'error_type' => 'insufficient_travel_time_after'
+                            ]
+                        ];
+                    }
+                }
+
+                // Check if new event is before existing event
+                if ($eventDateTime->lessThan($existingDateTime)) {
+                    $timeBetween = $eventDateTime->diffInHours($existingDateTime, false);
+
+                    if ($timeBetween < $requiredTravelHours) {
+                        return [
+                            'valid' => false,
+                            'message' => sprintf(
+                                'SNG travel conflict: SNG cannot travel from %s (%s) to %s (%s) in time. Required: %.1f hours, Available: %.1f hours',
+                                City::find($cityId)->name,
+                                $eventDateTime->format('H:i'),
+                                $existingEvent->city->name,
+                                $existingDateTime->format('H:i'),
+                                $requiredTravelHours,
+                                $timeBetween
+                            ),
+                            'details' => [
+                                'next_event' => $existingEvent->title,
+                                'next_city' => $existingEvent->city->name,
+                                'next_time' => $existingDateTime->format('Y-m-d H:i'),
+                                'current_city' => City::find($cityId)->name,
+                                'current_time' => $eventDateTime->format('Y-m-d H:i'),
+                                'required_travel_hours' => $requiredTravelHours,
+                                'available_hours' => round($timeBetween, 1),
+                                'shortage_hours' => round($requiredTravelHours - $timeBetween, 1),
+                                'error_type' => 'insufficient_travel_time_before'
+                            ]
+                        ];
+                    }
+                }
+            }
+
+            // All checks passed
+            return [
+                'valid' => true,
+                'message' => 'SNG is available - no conflicts found'
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'valid' => false,
+                'message' => 'Error validating SNG conflicts: ' . $e->getMessage()
+            ];
         }
     }
 

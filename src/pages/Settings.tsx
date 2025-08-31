@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DropdownConfig } from '@/types';
 import { User } from '@/types/user';
 import { Settings as SettingsIcon, Database, Users, MapPin, Building, Loader2, Lock, ShieldAlert, Shield } from 'lucide-react';
-import { useEventTypes, useVenues, useObservers, useCities } from '@/hooks/useApi';
+import { useEventTypes, useVenues, useObservers, useCities, useSngs } from '@/hooks/useApi';
 import { mockUsers, mockRoles } from '@/data/mockUsers';
 
 type TabType = 'dropdowns' | 'cities' | 'distances' | 'users' | 'permissions';
@@ -72,6 +72,10 @@ const Settings = () => {
   const { data: observersResponse, isLoading: observersLoading } = useObservers({
     enabled: false // Load only when specifically requested
   });
+  
+  const { data: sngsResponse, isLoading: sngsLoading } = useSngs({
+    enabled: false // Load only when specifically requested
+  });
 
   // Convert backend data to frontend format
   const dropdownConfig: DropdownConfig = useMemo(() => {
@@ -127,15 +131,20 @@ const Settings = () => {
         id: observer.id.toString(),
         value: observer.name,
         label: observer.name
+      })) : [],
+      sngs: sngsResponse?.success ? sngsResponse.data.map(sng => ({
+        id: sng.id.toString(),
+        value: sng.name,
+        label: sng.name
       })) : []
     };
-  }, [eventTypesResponse, citiesResponse, venuesResponse, observersResponse]);
+  }, [eventTypesResponse, citiesResponse, venuesResponse, observersResponse, sngsResponse]);
 
   // Loading states per tab
   const getTabLoadingState = (tab: TabType) => {
     switch (tab) {
       case 'dropdowns':
-        return eventTypesLoading || venuesLoading || observersLoading || (citiesLoading && activeTab === 'dropdowns');
+        return eventTypesLoading || venuesLoading || observersLoading || sngsLoading || (citiesLoading && activeTab === 'dropdowns');
       case 'cities':
         return citiesLoading;
       case 'distances':

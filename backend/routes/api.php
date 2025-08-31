@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\EventTypeController;
 use App\Http\Controllers\Api\VenueController;
 use App\Http\Controllers\Api\ObserverController;
+use App\Http\Controllers\Api\SngController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AuthController;
@@ -65,6 +66,9 @@ Route::middleware(['api', 'auth:api'])->group(function () {
     // Observers routes
     Route::apiResource('observers', ObserverController::class);
     Route::patch('observers/{observer}/status', [ObserverController::class, 'updateStatus']);
+    
+    // SNGs routes
+    Route::apiResource('sngs', SngController::class);
     
     // Events routes
     Route::apiResource('events', EventController::class);

@@ -34,6 +34,7 @@ export function EditEventDialog({
   const [city, setCity] = useState('');
   const [venue, setVenue] = useState('');
   const [ob, setOb] = useState('');
+  const [sng, setSng] = useState('');
   const [time, setTime] = useState('');
   
   // ✅ استخدام useUpdateEvent hook مباشرة
@@ -42,12 +43,15 @@ export function EditEventDialog({
   // Reset form when event changes
   useEffect(() => {
     if (event && isOpen) {
+      console.log('Event data in EditEventDialog:', event);
+      console.log('Event SNG:', event.sng);
       setDate(new Date(event.date));
       setEventName(event.event);
       setEventType(event.eventType);
       setCity(event.city);
       setVenue(event.venue);
       setOb(event.ob);
+      setSng(event.sng || '');
       setTime(event.time);
     }
   }, [event, isOpen]);
@@ -72,8 +76,13 @@ export function EditEventDialog({
       const cityId = dropdownConfig.cities.find(c => c.value === city)?.id;
       const venueId = dropdownConfig.venues.find(v => v.value === venue)?.id;
       const observerId = dropdownConfig.obs.find(o => o.value === ob)?.id;
+      const sngId = dropdownConfig.sngs?.find(s => s.value === sng)?.id;
 
-      await updateEventMutation.mutateAsync({
+      console.log('Dropdown config SNGs:', dropdownConfig.sngs);
+      console.log('SNG value in form:', sng);
+      console.log('SNG ID found:', sngId);
+
+      const updateData = {
         id: parseInt(event.id),
         title: eventName,
         event_date: format(date, 'yyyy-MM-dd'),
@@ -81,8 +90,15 @@ export function EditEventDialog({
         event_type_id: eventTypeId ? parseInt(eventTypeId) : undefined,
         city_id: cityId ? parseInt(cityId) : undefined,
         venue_id: venueId ? parseInt(venueId) : undefined,
-        observer_id: observerId ? parseInt(observerId) : undefined
-      });
+        observer_id: observerId ? parseInt(observerId) : undefined,
+        sng_id: sngId ? parseInt(sngId) : null
+      };
+
+      console.log('Sending update data:', updateData);
+      console.log('SNG value:', sng);
+      console.log('SNG ID:', sngId);
+
+      await updateEventMutation.mutateAsync(updateData);
 
       // ✅ في حالة النجاح فقط - أغلق الـ dialog
       onClose();
@@ -98,6 +114,7 @@ export function EditEventDialog({
           city,
           venue,
           ob,
+          sng,
           time,
           updatedAt: new Date().toISOString(),
         };
@@ -117,6 +134,7 @@ export function EditEventDialog({
     setCity('');
     setVenue('');
     setOb('');
+    setSng('');
     setTime('');
   };
 
@@ -244,6 +262,22 @@ export function EditEventDialog({
                       {observer.label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sng">SNG</Label>
+              <Select value={sng} onValueChange={setSng}>
+                <SelectTrigger className=" transition-all">
+                  <SelectValue placeholder="Select SNG" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dropdownConfig.sngs?.map((sngOption) => (
+                    <SelectItem key={sngOption.id} value={sngOption.value}>
+                      {sngOption.label}
+                    </SelectItem>
+                  )) || []}
                 </SelectContent>
               </Select>
             </div>

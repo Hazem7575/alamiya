@@ -7,6 +7,7 @@ export interface Event {
   city: string;
   venue: string;
   ob: string;
+  sng?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,6 +24,7 @@ export interface DropdownConfig {
   cities: DropdownOption[];
   venues: DropdownOption[];
   obs: DropdownOption[];
+  sngs?: DropdownOption[];
 }
 
 export type ViewMode = 'table' | 'monthly' | 'weekly';

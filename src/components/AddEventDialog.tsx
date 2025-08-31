@@ -36,6 +36,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
   const [city, setCity] = useState('');
   const [venue, setVenue] = useState('');
   const [ob, setOb] = useState('');
+  const [sng, setSng] = useState('');
   const [time, setTime] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +69,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
       city: city,
       venue: venue,
       ob: ob,
+      sng: sng,
     };
 
     try {
@@ -85,6 +87,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
       setCity('');
       setVenue('');
       setOb('');
+      setSng('');
       setTime('');
       setOpen(false);
     } catch (error) {
@@ -221,6 +224,23 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
                     {obOption.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sng">SNG</Label>
+            <Select value={sng} onValueChange={setSng}>
+              <SelectTrigger className=" transition-all">
+                <SelectValue placeholder="Select SNG " />
+              </SelectTrigger>
+              <SelectContent>
+                {dropdownConfig.sngs?.map((sngOption) => (
+                  <SelectItem key={sngOption.id} value={sngOption.value}>
+                    {sngOption.label}
+                  </SelectItem>
+                )) || []}
               </SelectContent>
             </Select>
 

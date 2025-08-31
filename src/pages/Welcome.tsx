@@ -11,8 +11,8 @@ const Welcome = () => {
       <div className="max-w-4xl mx-auto text-center">
         {/* Header */}
         <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center justify-center w-16 h-16 bg-primary rounded-xl shadow-card mr-4">
-            <Building2 className="h-8 w-8 text-primary-foreground" />
+          <div className="flex items-center justify-center w-16 h-16  mr-4">
+            <img src="/alamiya-logo.png" alt=""/>
           </div>
           <div>
             <h1 className="text-4xl font-bold text-foreground">Alamiya Calendar</h1>

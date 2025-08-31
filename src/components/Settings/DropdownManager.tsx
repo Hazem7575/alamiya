@@ -22,9 +22,13 @@ import {
   useCreateObserver,
   useUpdateObserver,
   useDeleteObserver,
+  useCreateSng,
+  useUpdateSng,
+  useDeleteSng,
   useCities,
   useVenues,
-  useObservers
+  useObservers,
+  useSngs
 } from '@/hooks/useApi';
 
 interface DropdownManagerProps {
@@ -56,6 +60,12 @@ export function DropdownManager({ config }: DropdownManagerProps) {
           edit: 'observers.edit',
           delete: 'observers.delete'
         };
+      case 'sngs':
+        return {
+          create: 'sngs.create',
+          edit: 'sngs.edit',
+          delete: 'sngs.delete'
+        };
       default:
         return { create: '', edit: '', delete: '' };
     }
@@ -84,7 +94,8 @@ export function DropdownManager({ config }: DropdownManagerProps) {
   const [newValues, setNewValues] = useState({
     eventTypes: '',
     venues: '',
-    obs: ''
+    obs: '',
+    sngs: ''
   });
 
   // Mutation hooks
@@ -97,6 +108,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
   const createObserver = useCreateObserver();
   const updateObserver = useUpdateObserver();
   const deleteObserver = useDeleteObserver();
+  const createSng = useCreateSng();
+  const updateSng = useUpdateSng();
+  const deleteSng = useDeleteSng();
   
   // Conditional data fetching for venues and observers
   const { data: citiesResponse } = useCities();
@@ -105,6 +119,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
   });
   const { data: observersResponse, isLoading: observersLoading } = useObservers({
     enabled: activeDropdownTab === 'obs'
+  });
+  const { data: sngsResponse, isLoading: sngsLoading } = useSngs({
+    enabled: activeDropdownTab === 'sngs'
   });
 
   // Prevent tab reset by maintaining state consistency
@@ -358,6 +375,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
         case 'obs':
           await updateObserver.mutateAsync({ id, code: newName });
           break;
+        case 'sngs':
+          await updateSng.mutateAsync({ id, code: newName });
+          break;
         default:
           toast({ 
             variant: "destructive", 
@@ -397,6 +417,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
           break;
         case 'obs':
           await deleteObserver.mutateAsync(numId);
+          break;
+        case 'sngs':
+          await deleteSng.mutateAsync(numId);
           break;
         default:
           toast({ 
@@ -457,6 +480,11 @@ export function DropdownManager({ config }: DropdownManagerProps) {
           break;
         case 'obs':
           await createObserver.mutateAsync({ 
+            code: value
+          });
+          break;
+        case 'sngs':
+          await createSng.mutateAsync({ 
             code: value
           });
           break;
@@ -549,12 +577,14 @@ export function DropdownManager({ config }: DropdownManagerProps) {
                     disabled={
                       (type === 'eventTypes' && updateEventType.isPending) ||
                       (type === 'venues' && updateVenue.isPending) ||
-                      (type === 'obs' && updateObserver.isPending)
+                      (type === 'obs' && updateObserver.isPending) ||
+                      (type === 'sngs' && updateSng.isPending)
                     }
                   >
                     {((type === 'eventTypes' && updateEventType.isPending) ||
                       (type === 'venues' && updateVenue.isPending) ||
-                      (type === 'obs' && updateObserver.isPending)) ? (
+                      (type === 'obs' && updateObserver.isPending) ||
+                      (type === 'sngs' && updateSng.isPending)) ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Save className="h-4 w-4" />
@@ -691,10 +721,11 @@ export function DropdownManager({ config }: DropdownManagerProps) {
               }}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="eventTypes">Event Types</TabsTrigger>
           <TabsTrigger value="venues">Venues</TabsTrigger>
           <TabsTrigger value="obs">OB</TabsTrigger>
+          <TabsTrigger value="sngs">SNG</TabsTrigger>
         </TabsList>
         
         <TabsContent value="eventTypes" className="mt-6">
@@ -729,6 +760,23 @@ export function DropdownManager({ config }: DropdownManagerProps) {
             </div>
           ) : (
             renderDropdownSection('obs', 'OB', config.obs)
+          )}
+        </TabsContent>
+
+        <TabsContent value="sngs" className="mt-6">
+          {sngsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-4">
+                <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
+                <p className="text-sm text-muted-foreground">Loading SNGs...</p>
+              </div>
+            </div>
+          ) : (
+            renderDropdownSection('sngs', 'SNG', sngsResponse?.success ? sngsResponse.data.map(sng => ({
+              id: sng.id.toString(),
+              value: sng.name,
+              label: sng.name
+            })) : [])
           )}
         </TabsContent>
       </Tabs>

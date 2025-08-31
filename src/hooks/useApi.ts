@@ -226,6 +226,7 @@ interface EventFilters {
   eventTypes?: string[];
   cities?: string[];
   observers?: string[];
+  sngs?: string[];
   dateRange?: { from: string; to: string } | null;
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
@@ -315,7 +316,7 @@ export function useUpdateEvent() {
     onError: (error: any) => {
       // Extract error details from API response
       const errorData = error?.response?.data;
-      
+      console.log(errorData)
       // Handle specific error types
       if (errorData?.error_type === 'travel_time_insufficient') {
         const details = errorData.details;
@@ -329,18 +330,15 @@ export function useUpdateEvent() {
       } else if (errorData?.error_type === 'observer_conflict') {
         toast({
           title: "Observer Conflict", 
-          description: "Observer is already assigned to another event at this time",
+          description: errorData?.message,
           variant: "destructive",
           duration: 4000,
           className: "text-white"
         });
       } else {
         // Generic error message - clean up any Arabic text
-        let errorMessage = errorData?.message || "Failed to update event";
-        // If message contains Arabic or is too long, use simple English message
-        if (errorMessage.length > 100 || /[\u0600-\u06FF]/.test(errorMessage)) {
-          errorMessage = "Failed to update event";
-        }
+        let errorMessage = errorData?.message;
+
         toast({
           title: "Update Failed",
           description: errorMessage,
@@ -753,6 +751,126 @@ export function useDeleteObserver() {
       toast({
         variant: "destructive",
         title: "Unable to Delete Observer",
+        description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
+      });
+    },
+  });
+}
+
+// SNG hooks
+export function useSngs(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['sngs'],
+    queryFn: () => apiClient.getSngs(),
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    enabled: options?.enabled !== false, // Default to true
+  });
+}
+
+export function useCreateSng() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: { code: string }) => 
+      apiClient.createSng(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sngs'] });
+      toast({
+        title: "Success",
+        description: "SNG created successfully",
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to create SNG";
+      let errorDetails = "";
+      
+      const data = error?.response?.data;
+      if (data?.details) {
+        errorDetails = data.details || "";
+        errorMessage = data.message || errorMessage;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        if (error.response.data.errors) {
+          const errorKeys = Object.keys(error.response.data.errors);
+          if (errorKeys.length > 0) {
+            errorDetails = error.response.data.errors[errorKeys[0]][0];
+          }
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Unable to Create SNG",
+        description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
+      });
+    },
+  });
+}
+
+export function useUpdateSng() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, code }: { id: number; code: string }) => 
+      apiClient.updateSng(id, { code }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sngs'] });
+      toast({
+        title: "Success",
+        description: "SNG updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to update SNG";
+      let errorDetails = "";
+      
+      const data = error?.response?.data;
+      if (data?.details) {
+        errorDetails = data.details || "";
+        errorMessage = data.message || errorMessage;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        if (error.response.data.errors) {
+          const errorKeys = Object.keys(error.response.data.errors);
+          if (errorKeys.length > 0) {
+            errorDetails = error.response.data.errors[errorKeys[0]][0];
+          }
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Unable to Update SNG",
+        description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
+      });
+    },
+  });
+}
+
+export function useDeleteSng() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteSng(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sngs'] });
+      toast({
+        title: "Success",
+        description: "SNG deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to delete SNG";
+      let errorDetails = "";
+      
+      const data = error?.response?.data;
+      if (data?.details) {
+        errorDetails = data.details || "";
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Unable to Delete SNG",
         description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
       });
     },

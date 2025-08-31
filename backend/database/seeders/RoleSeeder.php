@@ -41,6 +41,7 @@ class RoleSeeder extends Seeder
                 'events.view', 'events.create', 'events.edit', 'events.manage_status',
                 'venues.view', 'venues.create', 'venues.edit',
                 'observers.view', 'observers.create', 'observers.edit',
+                'sngs.view', 'sngs.create', 'sngs.edit',
                 'cities.view', 'event_types.view',
                 'dashboard.view'
             ],
@@ -67,6 +68,7 @@ class RoleSeeder extends Seeder
                 'cities.view',
                 'venues.view',
                 'observers.view',
+                'sngs.view',
                 'event_types.view',
                 'dashboard.view'
             ],

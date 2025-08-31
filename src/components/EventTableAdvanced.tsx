@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { ModernDateRangePicker } from "@/components/ui/ModernDateRangePicker";
 import {
   Select,
@@ -36,14 +37,6 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import {
   Table,
   TableBody,
@@ -122,6 +115,7 @@ interface EventTableProps {
   cities?: any[];
   venues?: any[];
   observers?: any[];
+  sngs?: any[];
   onDeleteEvents?: (eventIds: string[]) => void;
   onEditEvent?: (event: Event) => void;
   onUpdateEvent?: (event: Event) => void;
@@ -132,12 +126,14 @@ interface EventTableProps {
     eventTypes: string[];
     cities: string[];
     observers: string[];
+    sngs: string[];
     dateRange: any;
   };
   onSearchChange?: (search: string) => void;
   onEventTypeFilter?: (eventTypes: string[]) => void;
   onCityFilter?: (cities: string[]) => void;
   onObserverFilter?: (observers: string[]) => void;
+  onSngFilter?: (sngs: string[]) => void;
   onDateRangeFilter?: (dateRange: any) => void;
   // Sort props
   sorting?: {
@@ -172,6 +168,7 @@ export function EventTable({
   cities = [],
   venues = [],
   observers = [],
+  sngs = [],
   onDeleteEvents, 
   onEditEvent, 
   onUpdateEvent, 
@@ -182,6 +179,7 @@ export function EventTable({
   onEventTypeFilter,
   onCityFilter,
   onObserverFilter,
+  onSngFilter,
   onDateRangeFilter,
   // Sort props
   sorting,
@@ -216,8 +214,10 @@ export function EventTable({
   const [editValue, setEditValue] = useState<string>("");
   const [selectedObs, setSelectedObs] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
   const [obSearchTerm, setObSearchTerm] = useState('');
   const [citySearchTerm, setCitySearchTerm] = useState('');
+  const [sngSearchTerm, setSngSearchTerm] = useState('');
   
   // Edit modal state
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -579,6 +579,54 @@ export function EventTable({
       },
       size: 100,
     },
+    {
+      header: "SNG",
+      accessorKey: "sng",
+      cell: ({ row }) => {
+        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "sng";
+        return isEditing ? (
+          <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-8 w-full justify-between">
+                {editValue || row.getValue("sng")}
+                <span className="ml-2">▼</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-32 p-0 bg-popover border border-border z-50">
+              <Command>
+                <CommandInput placeholder="Search SNG..." />
+                <CommandList>
+                  <CommandEmpty>No SNG found.</CommandEmpty>
+                  <CommandGroup>
+                    {sngs.map((sng) => (
+                      <CommandItem
+                        key={sng.id}
+                        value={sng.name}
+                        onSelect={() => {
+                          setEditValue(sng.name);
+                          handleSaveEdit(row.original, "sng", sng.name);
+                        }}
+                      >
+                        {sng.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div 
+            className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+            onClick={() => canEditEvents() && handleStartEdit(row.id, "sng", row.getValue("sng"))}
+            title={canEditEvents() ? "Click to edit SNG" : "No permission to edit"}
+          >
+            {row.getValue("sng")}
+          </div>
+        );
+      },
+      size: 100,
+    },
     ...(canEditEvents() || canDeleteEvents() ? [{
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,
@@ -621,7 +669,7 @@ export function EventTable({
       const updatedEvent = { 
         ...event, 
         [field]: finalValue,
-        updatedAt: new Date().toISOString() // Add timestamp for optimistic update
+        updatedAt: new Date().toISOString()
       };
       onUpdateEvent(updatedEvent);
     }
@@ -652,6 +700,9 @@ export function EventTable({
     }
     if (filters?.cities) {
       setSelectedCities(filters.cities);
+    }
+    if (filters?.sngs) {
+      setSelectedSngs(filters.sngs);
     }
   }, [filters]);
   
@@ -686,6 +737,10 @@ export function EventTable({
     cities?.map(c => c.name).filter(Boolean) || [], 
     [cities]
   );
+    const uniqueSngs = useMemo(() => 
+    sngs?.map(s => s.name).filter(Boolean) || [], 
+    [sngs]
+  );
   const uniqueEventTypes = useMemo(() => 
     eventTypes?.map(et => et.name).filter(Boolean) || [], 
     [eventTypes]
@@ -709,6 +764,9 @@ export function EventTable({
   );
   const filteredCities = uniqueCities.filter(city => 
     city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  );
+  const filteredSngs = uniqueSngs.filter(sng => 
+    sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
   );
 
   const selectedEventTypes = useMemo(() => {
@@ -756,6 +814,18 @@ export function EventTable({
     setSelectedCities(newSelectedCities);
     // Call the backend filter handler
     onCityFilter?.(newSelectedCities);
+  };
+
+  const handleSngChange = (sng: string, checked: boolean) => {
+    let newSelectedSngs: string[];
+    if (checked) {
+      newSelectedSngs = [...selectedSngs, sng];
+    } else {
+      newSelectedSngs = selectedSngs.filter(s => s !== sng);
+    }
+    setSelectedSngs(newSelectedSngs);
+    // Call the backend filter handler
+    onSngFilter?.(newSelectedSngs);
   };
 
   // Date range filter logic with calendar
@@ -949,6 +1019,51 @@ export function EventTable({
               </PopoverContent>
             </Popover>
 
+            {/* SNG Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <Filter
+                    className="-ms-1 me-2 opacity-60"
+                    size={16}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                  SNG
+                  {selectedSngs.length > 0 && (
+                    <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                      {selectedSngs.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-0" align="start">
+                <div className="p-3 space-y-3">
+                  <Input
+                    placeholder="Search SNG..."
+                    value={sngSearchTerm}
+                    onChange={(e) => setSngSearchTerm(e.target.value)}
+                    className="h-8"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-2">
+                    {filteredSngs.map((sng) => (
+                      <div key={sng} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`sng-${sng}`}
+                          checked={selectedSngs.includes(sng)}
+                          onCheckedChange={(checked) => handleSngChange(sng, !!checked)}
+                        />
+                        <Label htmlFor={`sng-${sng}`} className="text-sm">{sng}</Label>
+                      </div>
+                    ))}
+                    {filteredSngs.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-2">No SNGs found</p>
+                    )}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {/* City Filter */}
             <Popover>
               <PopoverTrigger asChild>
@@ -1038,7 +1153,8 @@ export function EventTable({
                     eventTypes: eventTypes.map(et => ({ id: et.id?.toString(), value: et.name, label: et.name })),
                     cities: cities.map(c => ({ id: c.id?.toString(), value: c.name, label: c.name })),
                     venues: venues.map(v => ({ id: v.id?.toString(), value: v.name, label: v.name })),
-                    obs: observers.map(o => ({ id: o.id?.toString(), value: o.code || o.name, label: o.code || o.name }))
+                    obs: observers.map(o => ({ id: o.id?.toString(), value: o.code || o.name, label: o.code || o.name })),
+                    sngs: sngs?.map(s => ({ id: s.id?.toString(), value: s.name, label: s.name })) || []
                   }}
                   onAddEvent={onAddEvent}
                 />
@@ -1297,7 +1413,8 @@ export function EventTable({
           eventTypes: eventTypes.map(et => ({ id: et.id?.toString(), value: et.name, label: et.name })),
           cities: cities.map(c => ({ id: c.id?.toString(), value: c.name, label: c.name })),
           venues: venues.map(v => ({ id: v.id?.toString(), value: v.name, label: v.name })),
-          obs: observers.map(o => ({ id: o.id?.toString(), value: o.code || o.name, label: o.code || o.name }))
+          obs: observers.map(o => ({ id: o.id?.toString(), value: o.code, label: o.code})),
+          sngs: sngs?.map(s => ({ id: s.id?.toString(), value: s.name, label: s.name })) || []
         }}
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}

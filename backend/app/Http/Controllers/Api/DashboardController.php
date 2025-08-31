@@ -9,6 +9,7 @@ use App\Models\City;
 use App\Models\EventType;
 use App\Models\Venue;
 use App\Models\Observer;
+use App\Models\Sng;
 use App\Models\ActivityLog;
 use App\Http\Resources\EventTypeResource;
 use App\Http\Resources\ObserverResource;
@@ -112,6 +113,7 @@ class DashboardController extends Controller
         $cities = City::orderBy('name')->get();
         $venues = Venue::with('city')->orderBy('name')->get();
         $observers = Observer::orderBy('code')->get();
+        $sngs = Sng::orderBy('code')->get();
 
         return response()->json([
             'success' => true,
@@ -135,6 +137,14 @@ class DashboardController extends Controller
                     ];
                 }),
                 'observers' => ObserverResource::collection($observers),
+                'sngs' => $sngs->map(function($sng) {
+                    return [
+                        'id' => $sng->id,
+                        'name' => $sng->code,
+                        'created_at' => $sng->created_at,
+                        'updated_at' => $sng->updated_at,
+                    ];
+                }),
             ]
         ]);
     }
@@ -175,6 +185,7 @@ class DashboardController extends Controller
         $cities = City::orderBy('name')->get();
         $venues = Venue::with('city')->orderBy('name')->get();
         $observers = Observer::orderBy('code')->get();
+        $sngs = Sng::orderBy('code')->get();
 
         return response()->json([
             'success' => true,
@@ -198,6 +209,14 @@ class DashboardController extends Controller
                     ];
                 }),
                 'observers' => ObserverResource::collection($observers),
+                'sngs' => $sngs->map(function($sng) {
+                    return [
+                        'id' => $sng->id,
+                        'name' => $sng->code,
+                        'created_at' => $sng->created_at,
+                        'updated_at' => $sng->updated_at,
+                    ];
+                }),
             ]
         ]);
     }

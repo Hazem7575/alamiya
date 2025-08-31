@@ -29,6 +29,7 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     return dateStr;
   };
 
+  console.log(backendEvent)
   return {
     id: backendEvent.id.toString(),
     date: formatDate(backendEvent.event_date),
@@ -38,6 +39,7 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     city: backendEvent.city?.name || 'Unknown',
     venue: backendEvent.venue?.name || 'Unknown',
     ob: backendEvent.observer?.code || 'Unknown',
+    sng: backendEvent.sng?.code || 'Unknown',
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };
@@ -101,9 +103,9 @@ const GuestDashboard = () => {
   const renderView = () => {
     switch (currentView) {
       case 'monthly':
-        return <MonthlyCalendar events={events} />;
+        return <MonthlyCalendar events={events} eventTypes={dashboardData?.eventTypes || []} />;
       case 'weekly':
-        return <WeeklyCalendar events={events} />;
+        return <WeeklyCalendar events={events} eventTypes={dashboardData?.eventTypes || []} />;
       default:
         return (
           <EventTableGuest 

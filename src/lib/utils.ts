@@ -45,13 +45,42 @@ export function getLightBadgeColor(value: string): LightBadgeColor {
 }
 
 /**
+ * Convert hex color to light badge color
+ */
+function hexToLightBadgeColor(hexColor: string): LightBadgeColor {
+  // Map common hex colors to light badge colors
+  const colorMap: { [key: string]: LightBadgeColor } = {
+    '#3B82F6': 'light_blue',    // Blue
+    '#10B981': 'light_green',   // Green
+    '#EF4444': 'light_red',     // Red
+    '#8B5CF6': 'light_violet',  // Purple/Violet
+    '#F59E0B': 'light_amber',   // Orange/Amber
+    '#06B6D4': 'light_cyan',    // Cyan
+    '#14B8A6': 'light_teal',    // Teal
+    '#6366F1': 'light_indigo',  // Indigo
+    '#EC4899': 'light_pink',    // Pink
+    '#F97316': 'light_orange',  // Orange
+    '#EAB308': 'light_yellow',  // Yellow
+    '#10B981': 'light_emerald', // Emerald
+    '#F43F5E': 'light_rose',    // Rose
+    '#64748B': 'light_slate',   // Slate
+  };
+  
+  return colorMap[hexColor.toUpperCase()] || 'light_blue';
+}
+
+/**
  * Get event type badge variant using light colors
  * This replaces all the getEventTypeBadgeVariant functions in components
  */
 export function getEventTypeBadgeVariant(eventType: string, eventTypeData?: any): LightBadgeColor {
-  // If backend has a light color variant stored, use it
-  if (eventTypeData?.color && LIGHT_BADGE_COLORS.includes(eventTypeData.color as any)) {
-    return eventTypeData.color as LightBadgeColor;
+  // If backend has a color stored, convert it to light badge color
+  if (eventTypeData?.color) {
+    if (LIGHT_BADGE_COLORS.includes(eventTypeData.color as any)) {
+      return eventTypeData.color as LightBadgeColor;
+    } else if (eventTypeData.color.startsWith('#')) {
+      return hexToLightBadgeColor(eventTypeData.color);
+    }
   }
   
   // Otherwise use auto-generated color

@@ -54,6 +54,12 @@ class PermissionSeeder extends Seeder
             ['name' => 'observers.edit', 'display_name' => 'Edit Observers', 'category' => 'observers'],
             ['name' => 'observers.delete', 'display_name' => 'Delete Observers', 'category' => 'observers'],
 
+            // SNGs
+            ['name' => 'sngs.view', 'display_name' => 'View SNGs', 'category' => 'sngs'],
+            ['name' => 'sngs.create', 'display_name' => 'Create SNGs', 'category' => 'sngs'],
+            ['name' => 'sngs.edit', 'display_name' => 'Edit SNGs', 'category' => 'sngs'],
+            ['name' => 'sngs.delete', 'display_name' => 'Delete SNGs', 'category' => 'sngs'],
+
             // Dashboard
             ['name' => 'dashboard.view', 'display_name' => 'View Dashboard', 'category' => 'dashboard'],
             ['name' => 'dashboard.analytics', 'display_name' => 'View Analytics', 'category' => 'dashboard'],
