@@ -121,9 +121,14 @@ const GuestDashboard = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Alamiya Calendar</h1>
-          <p className="text-muted-foreground">Team Schedule View - {events.length} Events</p>
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center justify-center w-16 h-16  mr-4">
+            <img src="/alamiya-logo.png" alt=""/>
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-foreground text-[30px]">Alamiya Calendar</h1>
+            <p className="text-xl text-muted-foreground text-[15px]">Discover Alamiya’s Latest Projects Step by Step</p>
+          </div>
         </div>
         {/* View Toggle */}
         <div className="flex justify-center mb-8">

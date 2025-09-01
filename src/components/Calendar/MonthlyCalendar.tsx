@@ -54,9 +54,11 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [selectedObs, setSelectedObs] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
   const [obSearchTerm, setObSearchTerm] = useState('');
   const [eventTypeSearchTerm, setEventTypeSearchTerm] = useState('');
   const [citySearchTerm, setCitySearchTerm] = useState('');
+  const [sngSearchTerm, setSngSearchTerm] = useState('');
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const year = currentDate.getFullYear();
@@ -85,8 +87,9 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
     const matchesEventType = selectedEventTypes.length === 0 || selectedEventTypes.includes(event.eventType);
     const matchesOb = selectedObs.length === 0 || selectedObs.includes(event.ob);
     const matchesCity = selectedCities.length === 0 || selectedCities.includes(event.city);
+    const matchesSng = selectedSngs.length === 0 || selectedSngs.includes(event.sng);
     
-    return matchesSearch && matchesEventType && matchesOb && matchesCity;
+    return matchesSearch && matchesEventType && matchesOb && matchesCity && matchesSng;
   });
 
   const getEventsForDate = (day: number) => {
@@ -99,6 +102,7 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
   const uniqueEventTypes = [...new Set(events.map(e => e.eventType))];
   const uniqueObs = [...new Set(events.map(e => e.ob))];
   const uniqueCities = [...new Set(events.map(e => e.city))];
+  const uniqueSngs = [...new Set(events.map(e => e.sng))];
 
   // Filter options based on search
   const filteredEventTypes = uniqueEventTypes.filter(type => 
@@ -109,6 +113,9 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
   );
   const filteredCities = uniqueCities.filter(city => 
     city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  );
+  const filteredSngs = uniqueSngs.filter(sng => 
+    sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
   );
 
   const handleEventTypeChange = (eventType: string, checked: boolean) => {
@@ -132,6 +139,14 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
       setSelectedCities([...selectedCities, city]);
     } else {
       setSelectedCities(selectedCities.filter(c => c !== city));
+    }
+  };
+
+  const handleSngChange = (sng: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSngs([...selectedSngs, sng]);
+    } else {
+      setSelectedSngs(selectedSngs.filter(s => s !== sng));
     }
   };
 
@@ -213,7 +228,7 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                   </span>
                 </div>
                 <div className="text-xs text-gray-600 mt-0.5 truncate text-left">
-                  {event.city}
+                  {event.city}  {event.time}
                 </div>
                 <div className="text-xs text-gray-600 mt-0.5 truncate text-left">
                   {event.ob} • {event.sng}
@@ -313,8 +328,9 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
           
-          {/* Filters */}
-          <div className="flex gap-2 flex-wrap">
+          {/* Filters - Mobile horizontal scroll container */}
+          <div className="overflow-x-auto">
+            <div className="flex gap-2 flex-wrap min-w-max">
             {/* Event Type Filter */}
             <Popover>
               <PopoverTrigger asChild>
@@ -434,6 +450,47 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* SNG Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                  <Filter className="h-4 w-4 mr-2" />
+                  SNG
+                  {selectedSngs.length > 0 && (
+                    <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
+                      {selectedSngs.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-0">
+                <div className="p-3 space-y-3">
+                  <Input
+                    placeholder="Search SNGs..."
+                    value={sngSearchTerm}
+                    onChange={(e) => setSngSearchTerm(e.target.value)}
+                    className="h-8"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-2">
+                    {filteredSngs.map((sng) => (
+                      <div key={sng} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`sng-${sng}`}
+                          checked={selectedSngs.includes(sng)}
+                          onCheckedChange={(checked) => handleSngChange(sng, !!checked)}
+                        />
+                        <Label htmlFor={`sng-${sng}`} className="text-sm">{sng}</Label>
+                      </div>
+                    ))}
+                    {filteredSngs.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-2">No SNGs found</p>
+                    )}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            </div>
           </div>
         </div>
       </div>

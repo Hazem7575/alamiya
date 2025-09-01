@@ -102,6 +102,11 @@ const cityFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => 
   return filterValue.includes(row.getValue(columnId) as string);
 };
 
+const sngFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
+  if (!filterValue || filterValue.length === 0) return true;
+  return filterValue.includes(row.getValue(columnId) as string);
+};
+
 const dateRangeFilterFn: FilterFn<Event> = (row, columnId, filterValue: DateRange | undefined) => {
   if (!filterValue || (!filterValue.from && !filterValue.to)) return true;
   
@@ -140,12 +145,14 @@ export function EventTableGuest({
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [selectedObs, setSelectedObs] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Search terms for filter dropdowns
   const [eventTypeSearchTerm, setEventTypeSearchTerm] = useState("");
   const [obSearchTerm, setObSearchTerm] = useState("");
   const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [sngSearchTerm, setSngSearchTerm] = useState("");
   
   // Modern date range picker state
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
@@ -250,6 +257,7 @@ export function EventTableGuest({
         </div>
       ),
       size: 100,
+      filterFn: sngFilterFn,
     },
   ];
 
@@ -271,12 +279,15 @@ export function EventTableGuest({
     if (selectedObs.length > 0) {
       filters.push({ id: 'ob', value: selectedObs });
     }
+    if (selectedSngs.length > 0) {
+      filters.push({ id: 'sng', value: selectedSngs });
+    }
     if (dateRange) {
       filters.push({ id: 'date', value: dateRange });
     }
     
     return filters;
-  }, [globalFilter, selectedEventTypes, selectedCities, selectedObs, dateRange]);
+  }, [globalFilter, selectedEventTypes, selectedCities, selectedObs, selectedSngs, dateRange]);
 
   const table = useReactTable({
     data: events,
@@ -314,6 +325,11 @@ export function EventTableGuest({
     return Array.from(new Set(types)).sort();
   }, [events]);
 
+  const uniqueSngs = useMemo(() => {
+    const sngs = events.map(event => event.sng).filter(Boolean);
+    return Array.from(new Set(sngs)).sort();
+  }, [events]);
+
 
 
   // Get counts for each event type
@@ -329,6 +345,9 @@ export function EventTableGuest({
   );
   const filteredCities = uniqueCities.filter(city => 
     city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  );
+  const filteredSngs = uniqueSngs.filter(sng => 
+    sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
   );
 
   // Local filter handlers - no need to sync with parent
@@ -348,6 +367,10 @@ export function EventTableGuest({
     setSelectedCities(cities);
   };
 
+  const handleSngFilterChange = (sngs: string[]) => {
+    setSelectedSngs(sngs);
+  };
+
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
     setShowDateRangePicker(false); // Close the picker after selection
@@ -359,11 +382,12 @@ export function EventTableGuest({
     setSelectedEventTypes([]);
     setSelectedObs([]);
     setSelectedCities([]);
+    setSelectedSngs([]);
     setDateRange(undefined);
     setShowDateRangePicker(false);
   };
 
-  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || dateRange;
+  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || dateRange;
 
   if (isLoading) {
     return (
@@ -389,7 +413,9 @@ export function EventTableGuest({
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-3">
+        {/* Mobile horizontal scroll container for filters */}
+        <div className="overflow-x-auto">
+          <div className="flex flex-1 items-center gap-3 min-w-max">
           {/* Search */}
           <div className="relative">
             <Input
@@ -551,7 +577,47 @@ export function EventTableGuest({
               </div>
             </PopoverContent>
           </Popover>
-        </div>
+
+          {/* SNG Filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                SNG
+                {selectedSngs.length > 0 && (
+                  <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+                    {selectedSngs.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="min-w-36 p-3" align="start">
+              <div className="space-y-3">
+                <div className="text-xs font-medium text-muted-foreground">SNGs</div>
+                <div className="space-y-3">
+                  {filteredSngs.map((sng, i) => (
+                    <div key={sng} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`sng-${i}`}
+                        checked={selectedSngs.includes(sng)}
+                        onCheckedChange={(checked: boolean) => {
+                          const newSngs = checked 
+                            ? [...selectedSngs, sng]
+                            : selectedSngs.filter(s => s !== sng);
+                          handleSngFilterChange(newSngs);
+                        }}
+                      />
+                      <Label htmlFor={`sng-${i}`} className="flex grow justify-between gap-2 font-normal">
+                        {sng}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+            </div>
+          </div>
 
         {/* Clear Filters */}
         {hasActiveFilters && (

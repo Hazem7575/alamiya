@@ -1,8 +1,12 @@
 import { Event } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { EventPopup } from '@/components/EventPopup';
 import { useState } from 'react';
 import { getEventTypeBadgeVariant } from '@/lib/utils';
@@ -43,6 +47,17 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [popupOpen, setPopupOpen] = useState(false);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
+  const [selectedObs, setSelectedObs] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
+  const [obSearchTerm, setObSearchTerm] = useState('');
+  const [eventTypeSearchTerm, setEventTypeSearchTerm] = useState('');
+  const [citySearchTerm, setCitySearchTerm] = useState('');
+  const [sngSearchTerm, setSngSearchTerm] = useState('');
 
   const getWeekStart = (date: Date) => {
     const start = new Date(date);
@@ -69,9 +84,24 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
     setCurrentWeek(next);
   };
 
+  // Filter events based on search and filters
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = searchTerm === '' || 
+      event.event.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.venue.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesEventType = selectedEventTypes.length === 0 || selectedEventTypes.includes(event.eventType);
+    const matchesOb = selectedObs.length === 0 || selectedObs.includes(event.ob);
+    const matchesCity = selectedCities.length === 0 || selectedCities.includes(event.city);
+    const matchesSng = selectedSngs.length === 0 || selectedSngs.includes(event.sng);
+    
+    return matchesSearch && matchesEventType && matchesOb && matchesCity && matchesSng;
+  });
+
   const getEventsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    const dayEvents = events.filter(event => event.date === dateStr);
+    const dayEvents = filteredEvents.filter(event => event.date === dateStr);
     return dayEvents;
   };
 
@@ -79,6 +109,58 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     return `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+  };
+
+  // Get unique values for filters
+  const uniqueEventTypes = [...new Set(events.map(e => e.eventType))];
+  const uniqueObs = [...new Set(events.map(e => e.ob))];
+  const uniqueCities = [...new Set(events.map(e => e.city))];
+  const uniqueSngs = [...new Set(events.map(e => e.sng))];
+
+  // Filter options based on search
+  const filteredEventTypes = uniqueEventTypes.filter(type => 
+    type.toLowerCase().includes(eventTypeSearchTerm.toLowerCase())
+  );
+  const filteredObs = uniqueObs.filter(ob => 
+    ob.toLowerCase().includes(obSearchTerm.toLowerCase())
+  );
+  const filteredCities = uniqueCities.filter(city => 
+    city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  );
+  const filteredSngs = uniqueSngs.filter(sng => 
+    sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
+  );
+
+  const handleEventTypeChange = (eventType: string, checked: boolean) => {
+    if (checked) {
+      setSelectedEventTypes([...selectedEventTypes, eventType]);
+    } else {
+      setSelectedEventTypes(selectedEventTypes.filter(t => t !== eventType));
+    }
+  };
+
+  const handleObChange = (ob: string, checked: boolean) => {
+    if (checked) {
+      setSelectedObs([...selectedObs, ob]);
+    } else {
+      setSelectedObs(selectedObs.filter(o => o !== ob));
+    }
+  };
+
+  const handleCityChange = (city: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCities([...selectedCities, city]);
+    } else {
+      setSelectedCities(selectedCities.filter(c => c !== city));
+    }
+  };
+
+  const handleSngChange = (sng: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSngs([...selectedSngs, sng]);
+    } else {
+      setSelectedSngs(selectedSngs.filter(s => s !== sng));
+    }
   };
 
   return (
@@ -121,6 +203,185 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
           {/* Mobile Date Range */}
           <div className="md:hidden text-center">
             <p className="text-sm font-medium text-gray-700">{formatWeekRange()}</p>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3 flex-wrap">
+            {/* Search */}
+            <div className="relative flex-1 min-w-0">
+              <Input
+                placeholder="Search events, cities, venues..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+            
+            {/* Filters - Mobile horizontal scroll container */}
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 flex-wrap min-w-max">
+              {/* Event Type Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Event Type
+                    {selectedEventTypes.length > 0 && (
+                      <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
+                        {selectedEventTypes.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <div className="p-3 space-y-3">
+                    <Input
+                      placeholder="Search event types..."
+                      value={eventTypeSearchTerm}
+                      onChange={(e) => setEventTypeSearchTerm(e.target.value)}
+                      className="h-8"
+                    />
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {filteredEventTypes.map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`type-${type}`}
+                            checked={selectedEventTypes.includes(type)}
+                            onCheckedChange={(checked) => handleEventTypeChange(type, !!checked)}
+                          />
+                          <Label htmlFor={`type-${type}`} className="text-sm">{type}</Label>
+                        </div>
+                      ))}
+                      {filteredEventTypes.length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-2">No event types found</p>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* OB Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                    <Filter className="h-4 w-4 mr-2" />
+                    OB
+                    {selectedObs.length > 0 && (
+                      <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
+                        {selectedObs.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <div className="p-3 space-y-3">
+                    <Input
+                      placeholder="Search OB..."
+                      value={obSearchTerm}
+                      onChange={(e) => setObSearchTerm(e.target.value)}
+                      className="h-8"
+                    />
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {filteredObs.map((ob) => (
+                        <div key={ob} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`ob-${ob}`}
+                            checked={selectedObs.includes(ob)}
+                            onCheckedChange={(checked) => handleObChange(ob, !!checked)}
+                          />
+                          <Label htmlFor={`ob-${ob}`} className="text-sm">{ob}</Label>
+                        </div>
+                      ))}
+                      {filteredObs.length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-2">No OBs found</p>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* City Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                    <Filter className="h-4 w-4 mr-2" />
+                    City
+                    {selectedCities.length > 0 && (
+                      <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
+                        {selectedCities.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <div className="p-3 space-y-3">
+                    <Input
+                      placeholder="Search cities..."
+                      value={citySearchTerm}
+                      onChange={(e) => setCitySearchTerm(e.target.value)}
+                      className="h-8"
+                    />
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {filteredCities.map((city) => (
+                        <div key={city} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`city-${city}`}
+                            checked={selectedCities.includes(city)}
+                            onCheckedChange={(checked) => handleCityChange(city, !!checked)}
+                          />
+                          <Label htmlFor={`city-${city}`} className="text-sm">{city}</Label>
+                        </div>
+                      ))}
+                      {filteredCities.length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-2">No cities found</p>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* SNG Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                    <Filter className="h-4 w-4 mr-2" />
+                    SNG
+                    {selectedSngs.length > 0 && (
+                      <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
+                        {selectedSngs.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <div className="p-3 space-y-3">
+                    <Input
+                      placeholder="Search SNGs..."
+                      value={sngSearchTerm}
+                      onChange={(e) => setSngSearchTerm(e.target.value)}
+                      className="h-8"
+                    />
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {filteredSngs.map((sng) => (
+                        <div key={sng} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`sng-${sng}`}
+                            checked={selectedSngs.includes(sng)}
+                            onCheckedChange={(checked) => handleSngChange(sng, !!checked)}
+                          />
+                          <Label htmlFor={`sng-${sng}`} className="text-sm">{sng}</Label>
+                        </div>
+                      ))}
+                      {filteredSngs.length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-2">No SNGs found</p>
+                      )}
+                    </div>
+                  </div>
+                              </PopoverContent>
+            </Popover>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -178,22 +439,18 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
                     return (
                       <div
                         key={event.id}
-                        className={`p-0.5 md:p-2 rounded-lg ${eventColors.bg} border ${eventColors.border} shadow-sm cursor-pointer hover:shadow-md hover:border-opacity-80 transition-all duration-200 group`}
+                        className={`text-xs p-0 md:p-1 rounded-lg ${eventColors.bg} border ${eventColors.border} shadow-sm cursor-pointer hover:shadow-md hover:border-opacity-80 transition-all duration-200 group`}
                         onClick={() => {
                           setSelectedEvent(event);
                           setPopupOpen(true);
                         }}
                       >
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className={`text-xs font-medium ${eventColors.text} group-hover:opacity-80 truncate text-left`}>
-                            {event.time}
-                          </span>
-                        </div>
+
                         <div className={`text-xs font-semibold ${eventColors.text} mb-1 truncate leading-tight text-left`}>
                           {event.event}
                         </div>
                         <div className="text-xs text-gray-600 truncate leading-tight text-left">
-                          {event.city}
+                          {event.city} {event.time}
                         </div>
 
                         <div className="text-xs text-gray-500 mt-1 truncate leading-tight text-left">
