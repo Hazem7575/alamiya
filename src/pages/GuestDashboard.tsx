@@ -126,8 +126,8 @@ const GuestDashboard = () => {
             <img src="/alamiya-logo.png" alt=""/>
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-foreground text-[30px]">Alamiya Calendar</h1>
-            <p className="text-xl text-muted-foreground text-[15px]">Discover Alamiya’s Latest Projects Step by Step</p>
+            <h1 className="text-4xl font-bold text-foreground !text-[30px]">Alamiya Calendar</h1>
+            <p className="text-xl text-muted-foreground !text-[15px]">Discover Alamiya’s Latest Projects Step by Step</p>
           </div>
         </div>
         {/* View Toggle */}
