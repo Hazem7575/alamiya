@@ -19,6 +19,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock } from 'lucide-react';
 import debounce from 'lodash/debounce';
+import { useRealTimeEvents } from '@/hooks/useRealTimeEvents';
 // Helper function to convert Backend Event to Frontend Event
 const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
   // Convert backend date format to YYYY-MM-DD format that calendar expects
@@ -267,6 +268,85 @@ const Index = () => {
       </div>
     );
   }
+
+  // Real-time events callbacks
+  const handleRealTimeEventUpdate = useCallback(
+    (payload: { event: any; action: 'created' | 'updated' | 'deleted'; timestamp: string }) => {
+      const { event, action } = payload;
+      
+      // Update all matching React Query caches for events
+      queryClient.setQueriesData(
+        { queryKey: ['events'] }, 
+        (oldData: any) => {
+          if (!oldData?.data?.data) return oldData;
+          
+          const events = [...oldData.data.data];
+          
+          switch (action) {
+            case 'created':
+              // Add new event to the beginning of the list
+              events.unshift(event);
+              break;
+              
+            case 'updated':
+              // Update existing event
+              const updateIndex = events.findIndex((e) => e.id === event.id);
+              if (updateIndex !== -1) {
+                events[updateIndex] = event;
+              }
+              break;
+              
+            case 'deleted':
+              // Remove event from list
+              const deleteIndex = events.findIndex((e) => e.id === event.id);
+              if (deleteIndex !== -1) {
+                events.splice(deleteIndex, 1);
+              }
+              break;
+          }
+          
+          return {
+            ...oldData,
+            data: {
+              ...oldData.data,
+              data: events,
+            },
+          };
+        }
+      );
+      
+      // Show notification
+      switch (action) {
+        case 'created':
+          toast({
+            title: 'New Event Created',
+            description: `"${event.title}" has been added to the calendar.`,
+            duration: 3000,
+          });
+          break;
+        case 'updated':
+          toast({
+            title: 'Event Updated',
+            description: `"${event.title}" has been updated.`,
+            duration: 3000,
+          });
+          break;
+        case 'deleted':
+          toast({
+            title: 'Event Deleted',
+            description: `"${event.title}" has been removed from the calendar.`,
+            duration: 3000,
+          });
+          break;
+      }
+    },
+    [queryClient, toast]
+  );
+
+  // Setup real-time events
+  useRealTimeEvents({
+    onEventUpdate: handleRealTimeEventUpdate,
+  });
 
 
   

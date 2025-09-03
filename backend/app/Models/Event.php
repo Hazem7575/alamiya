@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\EventUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -92,5 +93,20 @@ class Event extends Model
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (Event $event) {
+            broadcast(new EventUpdated($event, 'created'))->toOthers();
+        });
+
+        static::updated(function (Event $event) {
+            broadcast(new EventUpdated($event, 'updated'))->toOthers();
+        });
+
+        static::deleted(function (Event $event) {
+            broadcast(new EventUpdated($event, 'deleted'))->toOthers();
+        });
     }
 }

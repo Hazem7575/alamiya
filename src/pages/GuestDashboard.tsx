@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Event, ViewMode } from '@/types';
 import { EventTableGuest } from '@/components/EventTableGuest';
 import { MonthlyCalendar } from '@/components/Calendar/MonthlyCalendar';
@@ -9,6 +9,9 @@ import { Card } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
 import { useGuestEvents, useGuestDashboardData } from '@/hooks/useGuestApi';
 import { BackendEvent } from '@/services/api';
+import { useRealTimeEvents } from '@/hooks/useRealTimeEvents';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 // Helper function to convert Backend Event to Frontend Event
 const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
@@ -47,6 +50,9 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
 
 const GuestDashboard = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('table');
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
   // Fetch data from backend using guest APIs (get all events, no pagination)
   const { 
     data: eventsResponse, 
@@ -60,6 +66,85 @@ const GuestDashboard = () => {
     isLoading: dashboardLoading,
     isError: dashboardError
   } = useGuestDashboardData();
+
+  // Real-time events callbacks for guest dashboard
+  const handleRealTimeEventUpdate = useCallback(
+    (payload: { event: any; action: 'created' | 'updated' | 'deleted'; timestamp: string }) => {
+      const { event, action } = payload;
+      
+      // Update all matching React Query caches for guest events
+      queryClient.setQueriesData(
+        { queryKey: ['guest-events'] }, 
+        (oldData: any) => {
+          if (!oldData?.data?.data) return oldData;
+          
+          const events = [...oldData.data.data];
+          
+          switch (action) {
+            case 'created':
+              // Add new event to the beginning of the list
+              events.unshift(event);
+              break;
+              
+            case 'updated':
+              // Update existing event
+              const updateIndex = events.findIndex((e) => e.id === event.id);
+              if (updateIndex !== -1) {
+                events[updateIndex] = event;
+              }
+              break;
+              
+            case 'deleted':
+              // Remove event from list
+              const deleteIndex = events.findIndex((e) => e.id === event.id);
+              if (deleteIndex !== -1) {
+                events.splice(deleteIndex, 1);
+              }
+              break;
+          }
+          
+          return {
+            ...oldData,
+            data: {
+              ...oldData.data,
+              data: events,
+            },
+          };
+        }
+      );
+      
+      // Show notification
+      switch (action) {
+        case 'created':
+          toast({
+            title: 'New Event Added',
+            description: `"${event.title}" has been added to the calendar.`,
+            duration: 3000,
+          });
+          break;
+        case 'updated':
+          toast({
+            title: 'Event Updated',
+            description: `"${event.title}" has been updated.`,
+            duration: 3000,
+          });
+          break;
+        case 'deleted':
+          toast({
+            title: 'Event Removed',
+            description: `"${event.title}" has been removed from the calendar.`,
+            duration: 3000,
+          });
+          break;
+      }
+    },
+    [queryClient, toast]
+  );
+
+  // Setup real-time events
+  useRealTimeEvents({
+    onEventUpdate: handleRealTimeEventUpdate,
+  });
 
   // Convert backend events to frontend format
   const events: Event[] = useMemo(() => {
