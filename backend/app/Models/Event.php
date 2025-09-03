@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Events\EventUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -95,20 +94,5 @@ class Event extends Model
         return $query->where('status', $status);
     }
 
-    protected static function booted(): void
-    {
-        static::created(function (Event $event) {
-            broadcast(new EventUpdated($event, 'created'))->toOthers();
-        });
-
-        static::updated(function (Event $event) {
-            broadcast(new EventUpdated($event, 'updated'))->toOthers();
-        });
-
-        static::deleting(function (Event $event) {
-            // Load relationships before deletion to ensure data is available for broadcasting
-            $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng']);
-            broadcast(new EventUpdated($eventWithRelations, 'deleted'))->toOthers();
-        });
-    }
+    // Broadcasting is handled in EventController for better reliability
 }

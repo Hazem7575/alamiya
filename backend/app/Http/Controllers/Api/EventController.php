@@ -10,6 +10,7 @@ use App\Models\CityDistance;
 use App\Models\Venue;
 use App\Models\Observer;
 use App\Models\Sng;
+use App\Events\EventUpdated;
 
 use App\Http\Resources\EventResource;
 use App\Traits\LogsActivity;
@@ -279,6 +280,9 @@ class EventController extends Controller
             $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
             // Activity logging is handled automatically by ModelActivityObserver
 
+            // Broadcast creation event from Controller for reliability
+            broadcast(new EventUpdated($event, 'created'))->toOthers();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Event created successfully',
@@ -400,6 +404,9 @@ class EventController extends Controller
 
         // Activity logging is handled automatically by ModelActivityObserver
 
+        // Broadcast update event
+        broadcast(new EventUpdated($event, 'updated'))->toOthers();
+
         return response()->json([
             'success' => true,
             'message' => 'Event updated successfully',
@@ -499,9 +506,14 @@ class EventController extends Controller
 
     public function destroy(Event $event): JsonResponse
     {
+        // Load relationships before deletion to ensure data is available for broadcasting
+        $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng']);
+        
         // Activity logging is handled automatically by ModelActivityObserver
-
         $event->delete();
+
+        // Broadcast deletion event
+        broadcast(new EventUpdated($eventWithRelations, 'deleted'))->toOthers();
 
         return response()->json([
             'success' => true,
