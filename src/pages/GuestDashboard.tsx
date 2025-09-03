@@ -72,6 +72,10 @@ const GuestDashboard = () => {
     (payload: { event: any; action: 'created' | 'updated' | 'deleted'; timestamp: string }) => {
       const { event, action } = payload;
       
+      let existingEventIndex = -1;
+      let updateIndex = -1;
+      let deleteIndex = -1;
+      
       // Update all matching React Query caches for guest events
       queryClient.setQueriesData(
         { queryKey: ['guest-events'] }, 
@@ -82,21 +86,25 @@ const GuestDashboard = () => {
           
           switch (action) {
             case 'created':
-              // Add new event to the beginning of the list
-              events.unshift(event);
+              // Check if event already exists to prevent duplicates (compare both as strings)
+              existingEventIndex = events.findIndex((e) => e.id.toString() === event.id.toString());
+              if (existingEventIndex === -1) {
+                // Add new event to the beginning of the list only if it doesn't exist
+                events.unshift(event);
+              }
               break;
               
             case 'updated':
-              // Update existing event
-              const updateIndex = events.findIndex((e) => e.id === event.id);
+              // Update existing event (compare both as strings)
+              updateIndex = events.findIndex((e) => e.id.toString() === event.id.toString());
               if (updateIndex !== -1) {
                 events[updateIndex] = event;
               }
               break;
               
             case 'deleted':
-              // Remove event from list
-              const deleteIndex = events.findIndex((e) => e.id === event.id);
+              // Remove event from list (compare both as strings)
+              deleteIndex = events.findIndex((e) => e.id.toString() === event.id.toString());
               if (deleteIndex !== -1) {
                 events.splice(deleteIndex, 1);
               }
@@ -113,28 +121,39 @@ const GuestDashboard = () => {
         }
       );
       
-      // Show notification
+      // Show notification only if event was actually added/updated (not duplicate)
       switch (action) {
         case 'created':
-          toast({
-            title: 'New Event Added',
-            description: `"${event.title}" has been added to the calendar.`,
-            duration: 3000,
-          });
+          if (existingEventIndex === -1) {
+            console.log('✅ New event added to Guest Dashboard cache:', event.title);
+            toast({
+              title: 'New Event Added',
+              description: `"${event.title}" has been added to the calendar.`,
+              duration: 3000,
+            });
+          } else {
+            console.log('⚠️ Event already exists in Guest Dashboard cache, skipping duplicate:', event.title);
+          }
           break;
         case 'updated':
-          toast({
-            title: 'Event Updated',
-            description: `"${event.title}" has been updated.`,
-            duration: 3000,
-          });
+          if (updateIndex !== -1) {
+            console.log('✏️ Event updated in Guest Dashboard cache:', event.title);
+            toast({
+              title: 'Event Updated',
+              description: `"${event.title}" has been updated.`,
+              duration: 3000,
+            });
+          }
           break;
         case 'deleted':
-          toast({
-            title: 'Event Removed',
-            description: `"${event.title}" has been removed from the calendar.`,
-            duration: 3000,
-          });
+          if (deleteIndex !== -1) {
+            console.log('🗑️ Event deleted from Guest Dashboard cache:', event.title);
+            toast({
+              title: 'Event Removed',
+              description: `"${event.title}" has been removed from the calendar.`,
+              duration: 3000,
+            });
+          }
           break;
       }
     },

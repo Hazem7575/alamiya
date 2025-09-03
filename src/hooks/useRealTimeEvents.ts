@@ -25,23 +25,26 @@ export const useRealTimeEvents = ({
     
     // Listen for created events
     channel.listen('.event.created', (payload: EventUpdatePayload) => {
-      console.log('Event created (Raw payload):', payload);
-      console.log('Event data:', payload.event);
+      console.log('🆕 Event created (Raw payload):', payload);
+      console.log('📄 Event data:', payload.event);
+      console.log('🔍 Event ID:', payload.event?.id);
       onEventUpdate?.(payload);
       onEventCreate?.(payload.event);
     });
 
     // Listen for updated events
     channel.listen('.event.updated', (payload: EventUpdatePayload) => {
-      console.log('Event updated (Raw payload):', payload);
-      console.log('Event data:', payload.event);
+      console.log('✏️ Event updated (Raw payload):', payload);
+      console.log('📄 Event data:', payload.event);
+      console.log('🔍 Event ID:', payload.event?.id);
       onEventUpdate?.(payload);
     });
 
     // Listen for deleted events
     channel.listen('.event.deleted', (payload: EventUpdatePayload) => {
-      console.log('Event deleted (Raw payload):', payload);
-      console.log('Event data:', payload.event);
+      console.log('🗑️ Event deleted (Raw payload):', payload);
+      console.log('📄 Event data:', payload.event);
+      console.log('🔍 Event ID:', payload.event?.id);
       onEventUpdate?.(payload);
       onEventDelete?.(payload.event.id);
     });

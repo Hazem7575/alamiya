@@ -326,7 +326,6 @@ export function useUpdateEvent() {
           description: `Required: ${details?.required_travel_hours || 'N/A'}h, Available: ${details?.available_hours || 'N/A'}h`,
           variant: "destructive",
           duration: 5000,
-          className: "text-white"
         });
       } else if (errorData?.error_type === 'observer_conflict') {
         toast({
@@ -334,7 +333,6 @@ export function useUpdateEvent() {
           description: errorData?.message,
           variant: "destructive",
           duration: 4000,
-          className: "text-white"
         });
       } else {
         // Generic error message - clean up any Arabic text
@@ -344,7 +342,6 @@ export function useUpdateEvent() {
           title: "Update Failed",
           description: errorMessage,
           variant: "destructive",
-          className: "text-white"
         });
       }
       

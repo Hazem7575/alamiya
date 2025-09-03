@@ -274,6 +274,10 @@ const Index = () => {
     (payload: { event: any; action: 'created' | 'updated' | 'deleted'; timestamp: string }) => {
       const { event, action } = payload;
       
+      let existingEventIndex = -1;
+      let updateIndex = -1;
+      let deleteIndex = -1;
+      
       // Update all matching React Query caches for events
       queryClient.setQueriesData(
         { queryKey: ['events'] }, 
@@ -284,21 +288,25 @@ const Index = () => {
           
           switch (action) {
             case 'created':
-              // Add new event to the beginning of the list
-              events.unshift(event);
+              // Check if event already exists to prevent duplicates (compare both as strings)
+              existingEventIndex = events.findIndex((e) => e.id.toString() === event.id.toString());
+              if (existingEventIndex === -1) {
+                // Add new event to the beginning of the list only if it doesn't exist
+                events.unshift(event);
+              }
               break;
               
             case 'updated':
-              // Update existing event
-              const updateIndex = events.findIndex((e) => e.id === event.id);
+              // Update existing event (compare both as strings)
+              updateIndex = events.findIndex((e) => e.id.toString() === event.id.toString());
               if (updateIndex !== -1) {
                 events[updateIndex] = event;
               }
               break;
               
             case 'deleted':
-              // Remove event from list
-              const deleteIndex = events.findIndex((e) => e.id === event.id);
+              // Remove event from list (compare both as strings)
+              deleteIndex = events.findIndex((e) => e.id.toString() === event.id.toString());
               if (deleteIndex !== -1) {
                 events.splice(deleteIndex, 1);
               }
@@ -315,28 +323,39 @@ const Index = () => {
         }
       );
       
-      // Show notification
+      // Show notification only if event was actually added/updated (not duplicate)
       switch (action) {
         case 'created':
-          toast({
-            title: 'New Event Created',
-            description: `"${event.title}" has been added to the calendar.`,
-            duration: 3000,
-          });
+          if (existingEventIndex === -1) {
+            console.log('✅ New event added to Dashboard cache:', event.title);
+            toast({
+              title: 'New Event Created',
+              description: `"${event.title}" has been added to the calendar.`,
+              duration: 3000,
+            });
+          } else {
+            console.log('⚠️ Event already exists in Dashboard cache, skipping duplicate:', event.title);
+          }
           break;
         case 'updated':
-          toast({
-            title: 'Event Updated',
-            description: `"${event.title}" has been updated.`,
-            duration: 3000,
-          });
+          if (updateIndex !== -1) {
+            console.log('✏️ Event updated in Dashboard cache:', event.title);
+            toast({
+              title: 'Event Updated',
+              description: `"${event.title}" has been updated.`,
+              duration: 3000,
+            });
+          }
           break;
         case 'deleted':
-          toast({
-            title: 'Event Deleted',
-            description: `"${event.title}" has been removed from the calendar.`,
-            duration: 3000,
-          });
+          if (deleteIndex !== -1) {
+            console.log('🗑️ Event deleted from Dashboard cache:', event.title);
+            toast({
+              title: 'Event Deleted',
+              description: `"${event.title}" has been removed from the calendar.`,
+              duration: 3000,
+            });
+          }
           break;
       }
     },
@@ -508,7 +527,6 @@ const Index = () => {
           toast({
       title: "Events Deleted",
       description: `${eventIds.length} event(s) deleted successfully`,
-      className: "text-white",
     });
 
     } catch (error) {
@@ -521,7 +539,6 @@ const Index = () => {
         title: "Delete Failed",
         description: "Failed to delete events. Please try again.",
         variant: "destructive",
-        className: "text-white",
       });
     }
   };
@@ -596,7 +613,6 @@ const Index = () => {
           title: "Insufficient Travel Time", 
           description: `Required: ${details?.required_travel_hours || 'N/A'}h, Available: ${details?.available_hours || 'N/A'}h`,
           variant: "destructive",
-          className: "text-white",
           duration: 5000,
         });
       } else {
@@ -606,7 +622,6 @@ const Index = () => {
           title: "Update Failed", 
           description: errorMessage,
           variant: "destructive",
-          className: "text-white",
         });
       }
     }

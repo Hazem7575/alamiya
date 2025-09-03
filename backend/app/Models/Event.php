@@ -105,8 +105,10 @@ class Event extends Model
             broadcast(new EventUpdated($event, 'updated'))->toOthers();
         });
 
-        static::deleted(function (Event $event) {
-            broadcast(new EventUpdated($event, 'deleted'))->toOthers();
+        static::deleting(function (Event $event) {
+            // Load relationships before deletion to ensure data is available for broadcasting
+            $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng']);
+            broadcast(new EventUpdated($eventWithRelations, 'deleted'))->toOthers();
         });
     }
 }
