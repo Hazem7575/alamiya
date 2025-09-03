@@ -10,14 +10,16 @@ use App\Models\CityDistance;
 use App\Models\Venue;
 use App\Models\Observer;
 use App\Models\Sng;
-use App\Models\ActivityLog;
+
 use App\Http\Resources\EventResource;
+use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
 
 class EventController extends Controller
 {
+    use LogsActivity;
     public function index(Request $request): JsonResponse
     {
         $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
@@ -275,7 +277,7 @@ class EventController extends Controller
             ]);
 
             $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
-            ActivityLog::logActivity('created', $event, null, $validated);
+            // Activity logging is handled automatically by ModelActivityObserver
 
             return response()->json([
                 'success' => true,
@@ -396,7 +398,7 @@ class EventController extends Controller
         $event->update($validated);
         $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
 
-        ActivityLog::logActivity('updated', $event, $oldValues, $validated);
+        // Activity logging is handled automatically by ModelActivityObserver
 
         return response()->json([
             'success' => true,
@@ -497,7 +499,7 @@ class EventController extends Controller
 
     public function destroy(Event $event): JsonResponse
     {
-        ActivityLog::logActivity('deleted', $event, $event->toArray());
+        // Activity logging is handled automatically by ModelActivityObserver
 
         $event->delete();
 
@@ -548,7 +550,8 @@ class EventController extends Controller
         $oldStatus = $event->status;
         $event->update($validated);
 
-        ActivityLog::logActivity('status_updated', $event, ['status' => $oldStatus], $validated);
+        // Log status change using the trait method
+        $this->logStatusChange($event, $oldStatus, $validated['status']);
 
         return response()->json([
             'success' => true,

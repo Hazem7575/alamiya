@@ -98,8 +98,8 @@ export interface EventsResponse {
 
 
 
-const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
-//const API_BASE_URL = 'http://localhost:8000/api';
+//const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 class ApiClient {
   private getAuthHeaders(): Record<string, string> {
@@ -121,7 +121,7 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const error: any = new Error(`HTTP error! status: ${response.status}`);
+        const error: any = new Error(errorData.message || `HTTP error! status: ${response.status}`);
         error.response = {
           status: response.status,
           data: errorData,
@@ -277,6 +277,17 @@ class ApiClient {
     return response;
   }
 
+  async changePassword(passwordData: {
+    current_password: string;
+    new_password: string;
+    new_password_confirmation: string;
+  }): Promise<ApiResponse<void>> {
+    return this.fetchApi('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(passwordData),
+    });
+  }
+
   // Helper methods
   isAuthenticated(): boolean {
     return !!localStorage.getItem('auth_token');
@@ -331,6 +342,7 @@ class ApiClient {
     city: string;
     venue: string;
     ob: string;
+    sng: string;
   }): Promise<ApiResponse<BackendEvent>> {
     // Transform frontend data to match backend expectations
     const backendData = {
@@ -341,6 +353,7 @@ class ApiClient {
       city: data.city,
       venue: data.venue,
       observer: data.ob,
+      sng: data.sng,
     };
 
 
@@ -680,8 +693,48 @@ export const getPermissionsByCategory = async (): Promise<any> => {
   return apiClient.get('/permissions/by-category');
 };
 
-// User permissions
+  // User permissions
 export const updateUserPermissions = async (userId: number, permissionIds: number[]): Promise<any> => {
   return apiClient.put(`/users/${userId}/permissions`, { permission_ids: permissionIds });
+};
+
+// Activity Logs API
+export const getActivityLogs = async (page = 1, perPage = 20, filters?: any): Promise<any> => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    per_page: perPage.toString()
+  });
+
+  if (filters?.action) params.append('action', filters.action);
+  if (filters?.model_type) params.append('model_type', filters.model_type);
+  if (filters?.date_from) params.append('date_from', filters.date_from);
+  if (filters?.date_to) params.append('date_to', filters.date_to);
+  if (filters?.search) params.append('search', filters.search);
+
+  return apiClient.get(`/activity-logs?${params.toString()}`);
+};
+
+export const getAllActivityLogs = async (page = 1, perPage = 20, filters?: any): Promise<any> => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    per_page: perPage.toString()
+  });
+
+  if (filters?.user_id) params.append('user_id', filters.user_id.toString());
+  if (filters?.action) params.append('action', filters.action);
+  if (filters?.model_type) params.append('model_type', filters.model_type);
+  if (filters?.date_from) params.append('date_from', filters.date_from);
+  if (filters?.date_to) params.append('date_to', filters.date_to);
+
+  return apiClient.get(`/activity-logs/all?${params.toString()}`);
+};
+
+export const getActivityStats = async (filters?: any): Promise<any> => {
+  const params = new URLSearchParams();
+
+  if (filters?.date_from) params.append('date_from', filters.date_from);
+  if (filters?.date_to) params.append('date_to', filters.date_to);
+
+  return apiClient.get(`/activity-logs/stats?${params.toString()}`);
 };
 

@@ -52,7 +52,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
       return;
     }
     
-    if (!date || !eventName || !eventType || !city || !venue || !ob || !time) {
+    if (!date || !eventName || !eventType || !city || !venue || !ob || !time || !sng) {
       toast({
         title: "Error",
         description: "Please fill in all required fields.",

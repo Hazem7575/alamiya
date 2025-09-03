@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -54,6 +55,17 @@ class AuthController extends Controller
 
             // Update last login time
             $user->updateLastLogin();
+
+            // Log login activity
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'login',
+                'model_type' => User::class,
+                'model_id' => $user->id,
+                'description' => "User {$user->name} logged into the system",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
 
             // Get combined permissions (user permissions + role permissions)
             $userPermissions = $user->permissions ?? [];
@@ -197,9 +209,24 @@ class AuthController extends Controller
     /**
      * User logout
      */
-    public function logout()
+    public function logout(Request $request)
     {
         try {
+            $user = auth()->user();
+            
+            // Log logout activity
+            if ($user) {
+                ActivityLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'logout',
+                    'model_type' => User::class,
+                    'model_id' => $user->id,
+                    'description' => "User {$user->name} logged out of the system",
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ]);
+            }
+            
             JWTAuth::invalidate(JWTAuth::getToken());
 
             return response()->json([
@@ -237,6 +264,72 @@ class AuthController extends Controller
                 'success' => false,
                 'message' => 'Token cannot be refreshed'
             ], 401);
+        }
+    }
+
+    /**
+     * Change user password
+     */
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string|min:6',
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = auth()->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            // Check if current password is correct
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect'
+                ], 400);
+            }
+
+            // Update password
+            $user->update([
+                'password' => Hash::make($request->new_password)
+            ]);
+
+            // Log password change activity
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'password_changed',
+                'model_type' => User::class,
+                'model_id' => $user->id,
+                'description' => "User {$user->name} changed their password",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to change password',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

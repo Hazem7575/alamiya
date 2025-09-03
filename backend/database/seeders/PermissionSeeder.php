@@ -71,6 +71,9 @@ class PermissionSeeder extends Seeder
             // Reports
             ['name' => 'reports.view', 'display_name' => 'View Reports', 'category' => 'reports'],
             ['name' => 'reports.export', 'display_name' => 'Export Reports', 'category' => 'reports'],
+
+            // History
+            ['name' => 'history.view', 'display_name' => 'View Activity History', 'category' => 'history'],
         ];
 
         foreach ($permissions as $permission) {

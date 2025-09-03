@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import View from "./pages/View";
 import Settings from "./pages/Settings";
+import History from "./pages/History";
 import UserManagement from "./routes/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
 import GuestDashboard from "./pages/GuestDashboard";
@@ -32,7 +33,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Welcome />} />
+            <Route path="/" element={<Login />} />
             <Route 
               path="/dashboard" 
               element={
@@ -56,6 +57,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/history" 
+              element={
+                <ProtectedRoute>
+                  <History />
                 </ProtectedRoute>
               } 
             />

@@ -260,6 +260,7 @@ export function useCreateEvent() {
       city: string;
       venue: string;
       ob: string;
+      sng: string;
     }) => apiClient.createEvent(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });

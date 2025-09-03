@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button';
-import { Settings, LayoutDashboard } from 'lucide-react';
+import { Settings, LayoutDashboard, History } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
 
 export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { canViewDashboard, canViewSettings } = usePermissions();
+  const { canViewDashboard, canViewSettings, canViewHistory } = usePermissions();
 
   const allNavItems = [
     {
@@ -16,6 +16,7 @@ export function Navigation() {
       path: '/dashboard',
       permission: canViewDashboard,
     },
+
     {
       id: 'settings',
       label: 'Settings',
@@ -23,10 +24,17 @@ export function Navigation() {
       path: '/settings',
       permission: canViewSettings,
     },
+    {
+      id: 'history',
+      label: '', // Empty label to show only icon
+      icon: History,
+      path: '/history',
+      permission: canViewHistory,
+    },
   ];
 
   // Filter nav items based on permissions
-  const navItems = allNavItems.filter(item => item.permission);
+  const navItems = allNavItems.filter(item => item.permission());
 
   // Don't render navigation if no items are available
   if (navItems.length === 0) {
@@ -52,7 +60,7 @@ export function Navigation() {
             }`}
           >
             <Icon className="h-4 w-4" />
-            {item.label}
+            {item.label && <span>{item.label}</span>}
           </Button>
         );
       })}

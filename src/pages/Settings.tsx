@@ -111,7 +111,7 @@ const Settings = () => {
     }
 
     return {
-      eventTypes: eventTypesResponse?.success ? eventTypesResponse.data.map(type => ({
+      eventTypes: eventTypesResponse?.success ? eventTypesResponse.data.map((type: any) => ({
         id: type.id.toString(),
         value: type.name,
         label: type.name,

@@ -265,7 +265,7 @@ export function EventTable({
           aria-label="Select row"
         />
       ),
-      size: 28,
+      size: 50,
       enableSorting: false,
       enableHiding: false,
     },

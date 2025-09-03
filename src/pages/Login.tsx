@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Building2, Eye, EyeOff, Loader2 , ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -115,10 +115,11 @@ const Login = () => {
         <div className="mt-6 text-center">
           <Button 
             variant="outline" 
-            className="w-full mb-4"
+            className="w-full mb-4 border border-gray"
             onClick={() => navigate('/guest')}
           >
-            👁️ View as Guest
+            <ArrowRight />
+            View as Guest
           </Button>
           <p className="text-xs text-muted-foreground">
             Powered by Konhub

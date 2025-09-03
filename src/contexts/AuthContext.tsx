@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Handle login errors with better messages
         let errorMessage = response.message || "Invalid email or password. Please try again.";
         let errorTitle = "Login Failed";
-        
+
         // Provide more specific error messages
         if (errorMessage.toLowerCase().includes('locked')) {
           errorTitle = "Account Locked";
@@ -113,10 +113,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
     } catch (error) {
-      console.error('Login error:', error);
-      // Handle network or server errors
       let errorMessage = "Unable to connect to server. Please check your internet connection and try again.";
-      let errorTitle = "Connection Error";
+      let errorTitle = "Fail Login";
       
       if (error && typeof error === 'object' && 'message' in error) {
         errorMessage = (error as any).message || errorMessage;

@@ -75,6 +75,7 @@ import {
   Calendar as CalendarIcon,
   Search,
   Eye,
+  ArrowUpDown,
 } from "lucide-react";
 import { useMemo, useRef, useState, useId, useEffect } from "react";
 import { DateRange } from "react-day-picker";
@@ -109,9 +110,9 @@ const sngFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
 
 const dateRangeFilterFn: FilterFn<Event> = (row, columnId, filterValue: DateRange | undefined) => {
   if (!filterValue || (!filterValue.from && !filterValue.to)) return true;
-  
+
   const rowDate = parseISO(row.original.date);
-  
+
   if (filterValue.from && filterValue.to) {
     return isWithinInterval(rowDate, { start: filterValue.from, end: filterValue.to });
   } else if (filterValue.from) {
@@ -119,11 +120,9 @@ const dateRangeFilterFn: FilterFn<Event> = (row, columnId, filterValue: DateRang
   } else if (filterValue.to) {
     return rowDate <= filterValue.to;
   }
-  
+
   return true;
 };
-
-
 
 interface EventTableGuestProps {
   events: Event[];
@@ -132,11 +131,12 @@ interface EventTableGuestProps {
 }
 
 export function EventTableGuest({
-  events,
-  eventTypes = [], // Keep only for badge colors
-  isLoading = false,
-}: EventTableGuestProps) {
-  // Table state
+                                  events,
+                                  eventTypes = [], // Keep only for badge colors
+                                  isLoading = false,
+                                }: EventTableGuestProps) {
+  // Table state - إضافة state للفرز
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
@@ -153,120 +153,209 @@ export function EventTableGuest({
   const [obSearchTerm, setObSearchTerm] = useState("");
   const [citySearchTerm, setCitySearchTerm] = useState("");
   const [sngSearchTerm, setSngSearchTerm] = useState("");
-  
+
   // Modern date range picker state
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchId = useId();
 
-  // Define columns
+  // Define columns مع إضافة خاصية الفرز
   const columns: ColumnDef<Event>[] = [
-
     {
-      header: "Date",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              Date
+            </Button>
+        );
+      },
       accessorKey: "date",
       cell: ({ row }) => {
         const date = new Date(row.getValue("date"));
         return (
-          <div className="font-mono text-sm">
-            {date.toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "2-digit",
-            })}
-          </div>
+            <div className="font-mono text-sm">
+              {date.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "2-digit",
+              })}
+            </div>
         );
       },
       size: 100,
       filterFn: dateRangeFilterFn,
+      // إضافة دالة فرز مخصصة للتاريخ
+      sortingFn: (rowA, rowB, columnId) => {
+        const dateA = new Date(rowA.getValue(columnId));
+        const dateB = new Date(rowB.getValue(columnId));
+        return dateA.getTime() - dateB.getTime();
+      },
     },
     {
-      header: "Event",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              Event
+            </Button>
+        );
+      },
       accessorKey: "event",
       cell: ({ row }) => (
-        <div className="font-medium max-w-[200px] truncate" title={row.getValue("event")}>
-          {row.getValue("event")}
-        </div>
+          <div className="font-medium max-w-[200px] truncate" title={row.getValue("event")}>
+            {row.getValue("event")}
+          </div>
       ),
       size: 200,
     },
     {
-      header: "Type",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              Type
+            </Button>
+        );
+      },
       accessorKey: "eventType",
       cell: ({ row }) => {
         const eventTypeValue = row.getValue("eventType") as string;
         const eventTypeData = eventTypes.find(et => et.name === eventTypeValue);
         const variant = getEventTypeBadgeVariant(eventTypeValue, eventTypeData);
-        
+
         return (
-          <Badge variant={variant}>
-            {eventTypeValue}
-          </Badge>
+            <Badge variant={variant}>
+              {eventTypeValue}
+            </Badge>
         );
       },
       size: 150,
       filterFn: eventTypeFilterFn,
     },
     {
-      header: "City",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              City
+            </Button>
+        );
+      },
       accessorKey: "city",
       cell: ({ row }) => (
-        <div className="text-sm">
-          {row.getValue("city")}
-        </div>
+          <div className="text-sm">
+            {row.getValue("city")}
+          </div>
       ),
       size: 150,
     },
     {
-      header: "Venue",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              Venue
+            </Button>
+        );
+      },
       accessorKey: "venue",
       cell: ({ row }) => (
-        <div className="text-sm max-w-[150px] truncate" title={row.getValue("venue")}>
-          {row.getValue("venue")}
-        </div>
+          <div className="text-sm max-w-[150px] truncate" title={row.getValue("venue")}>
+            {row.getValue("venue")}
+          </div>
       ),
       size: 150,
     },
     {
-      header: "Time",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              Time
+            </Button>
+        );
+      },
       accessorKey: "time",
       cell: ({ row }) => (
-        <div className="font-mono text-sm">
-          {row.getValue("time") || "00:00"}
-        </div>
+          <div className="font-mono text-sm">
+            {row.getValue("time") || "00:00"}
+          </div>
       ),
       size: 100,
+      // إضافة دالة فرز مخصصة للوقت
+      sortingFn: (rowA, rowB, columnId) => {
+        const timeA = rowA.getValue(columnId) as string || "00:00";
+        const timeB = rowB.getValue(columnId) as string || "00:00";
+        return timeA.localeCompare(timeB);
+      },
     },
     {
-      header: "OB",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              OB
+            </Button>
+        );
+      },
       accessorKey: "ob",
       cell: ({ row }) => (
-        <div className="text-sm">
-          {row.getValue("ob")}
-        </div>
+          <div className="text-sm">
+            {row.getValue("ob")}
+          </div>
       ),
       size: 100,
     },
     {
-      header: "SNG",
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              SNG
+            </Button>
+        );
+      },
       accessorKey: "sng",
       cell: ({ row }) => (
-        <div className="text-sm">
-          {row.getValue("sng")}
-        </div>
+          <div className="text-sm">
+            {row.getValue("sng")}
+          </div>
       ),
       size: 100,
       filterFn: sngFilterFn,
     },
   ];
 
-  // No need to sync with parent - using local filtering only
-
   // Apply filters to table columns for local filtering
   const tableFilters = useMemo(() => {
     const filters: ColumnFiltersState = [];
-    
+
     if (globalFilter) {
       filters.push({ id: 'event', value: globalFilter });
     }
@@ -285,7 +374,7 @@ export function EventTableGuest({
     if (dateRange) {
       filters.push({ id: 'date', value: dateRange });
     }
-    
+
     return filters;
   }, [globalFilter, selectedEventTypes, selectedCities, selectedObs, selectedSngs, dateRange]);
 
@@ -295,18 +384,24 @@ export function EventTableGuest({
     getCoreRowModel: getCoreRowModel(),
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    // إضافة معالجات الفرز
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     state: {
+      sorting, // إضافة state الفرز
       columnFilters: tableFilters,
       columnVisibility,
       globalFilter,
     },
     // Local filtering and sorting
-    manualSorting: false,
+    manualSorting: false, // تفعيل الفرز المحلي
     manualPagination: false,
     enableGlobalFilter: true,
     globalFilterFn: multiColumnFilterFn,
+    // تفعيل الفرز متعدد الأعمدة
+    enableMultiSort: true,
   });
 
   // Get unique values for filters from loaded events
@@ -314,12 +409,12 @@ export function EventTableGuest({
     const obs = events.map(event => event.ob).filter(Boolean);
     return Array.from(new Set(obs)).sort();
   }, [events]);
-  
+
   const uniqueCities = useMemo(() => {
     const cities = events.map(event => event.city).filter(Boolean);
     return Array.from(new Set(cities)).sort();
   }, [events]);
-  
+
   const uniqueEventTypes = useMemo(() => {
     const types = events.map(event => event.eventType).filter(Boolean);
     return Array.from(new Set(types)).sort();
@@ -330,8 +425,6 @@ export function EventTableGuest({
     return Array.from(new Set(sngs)).sort();
   }, [events]);
 
-
-
   // Get counts for each event type
   const eventTypeCounts = useMemo(() => {
     const eventTypeColumn = table.getColumn("eventType");
@@ -340,14 +433,14 @@ export function EventTableGuest({
   }, [table.getColumn("eventType")?.getFacetedUniqueValues()]);
 
   // Filter options based on search
-  const filteredObs = uniqueObs.filter(ob => 
-    ob.toLowerCase().includes(obSearchTerm.toLowerCase())
+  const filteredObs = uniqueObs.filter(ob =>
+      ob.toLowerCase().includes(obSearchTerm.toLowerCase())
   );
-  const filteredCities = uniqueCities.filter(city => 
-    city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  const filteredCities = uniqueCities.filter(city =>
+      city.toLowerCase().includes(citySearchTerm.toLowerCase())
   );
-  const filteredSngs = uniqueSngs.filter(sng => 
-    sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
+  const filteredSngs = uniqueSngs.filter(sng =>
+      sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
   );
 
   // Local filter handlers - no need to sync with parent
@@ -376,7 +469,7 @@ export function EventTableGuest({
     setShowDateRangePicker(false); // Close the picker after selection
   };
 
-  // Clear all filters
+  // Clear all filters and sorting
   const clearAllFilters = () => {
     setGlobalFilter("");
     setSelectedEventTypes([]);
@@ -385,300 +478,324 @@ export function EventTableGuest({
     setSelectedSngs([]);
     setDateRange(undefined);
     setShowDateRangePicker(false);
+    setSorting([]); // إعادة تعيين الفرز أيضاً
   };
 
-  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || dateRange;
+  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || dateRange || sorting.length > 0;
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Skeleton className="h-10 w-[250px]" />
-          <Skeleton className="h-10 w-[100px]" />
-          <Skeleton className="h-10 w-[100px]" />
-        </div>
-        <div className="rounded-md border">
-          <div className="h-[400px] flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-2">
-              <Skeleton className="h-4 w-4 rounded-full" />
-              <Skeleton className="h-4 w-[100px]" />
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-10 w-[250px]" />
+            <Skeleton className="h-10 w-[100px]" />
+            <Skeleton className="h-10 w-[100px]" />
+          </div>
+          <div className="rounded-md border">
+            <div className="h-[400px] flex items-center justify-center">
+              <div className="flex flex-col items-center space-y-2">
+                <Skeleton className="h-4 w-4 rounded-full" />
+                <Skeleton className="h-4 w-[100px]" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {/* Mobile horizontal scroll container for filters */}
-        <div className="overflow-x-auto">
-          <div className="flex flex-1 items-center gap-3 min-w-max">
-          {/* Search */}
-          <div className="relative">
-            <Input
-              ref={searchInputRef}
-              className="min-w-60 ps-9"
-              value={globalFilter}
-              onChange={(e) => handleGlobalFilterChange(e.target.value)}
-              placeholder="Search events, cities, venues..."
-              type="text"
-            />
-            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
-              <Search size={16} strokeWidth={2} />
-            </div>
-            {globalFilter && (
-              <button
-                className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center text-muted-foreground/80 hover:text-foreground"
-                onClick={() => handleGlobalFilterChange("")}
-              >
-                <CircleX size={16} strokeWidth={2} />
-              </button>
-            )}
-          </div>
-          
-          {/* Event Type Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
-                Event Type
-                {selectedEventTypes.length > 0 && (
-                  <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+      <div className="space-y-4">
+        {/* Filters */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Mobile horizontal scroll container for filters */}
+          <div className="overflow-x-auto">
+            <div className="flex flex-1 items-center gap-3 min-w-max">
+              {/* Search */}
+              <div className="relative">
+                <Input
+                    ref={searchInputRef}
+                    className="min-w-60 ps-9"
+                    value={globalFilter}
+                    onChange={(e) => handleGlobalFilterChange(e.target.value)}
+                    placeholder="Search events, cities, venues..."
+                    type="text"
+                />
+                <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
+                  <Search size={16} strokeWidth={2} />
+                </div>
+                {globalFilter && (
+                    <button
+                        className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center text-muted-foreground/80 hover:text-foreground"
+                        onClick={() => handleGlobalFilterChange("")}
+                    >
+                      <CircleX size={16} strokeWidth={2} />
+                    </button>
+                )}
+              </div>
+
+              {/* Event Type Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                    Event Type
+                    {selectedEventTypes.length > 0 && (
+                        <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
                     {selectedEventTypes.length}
                   </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Event Types</div>
-                <div className="space-y-3">
-                  {uniqueEventTypes.map((eventType, i) => (
-                    <div key={eventType} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`event-type-${i}`}
-                        checked={selectedEventTypes.includes(eventType)}
-                        onCheckedChange={(checked: boolean) => {
-                          const newEventTypes = checked 
-                            ? [...selectedEventTypes, eventType]
-                            : selectedEventTypes.filter(et => et !== eventType);
-                          handleEventTypeFilterChange(newEventTypes);
-                        }}
-                      />
-                      <Label htmlFor={`event-type-${i}`} className="flex grow justify-between gap-2 font-normal">
-                        {eventType}
-                      </Label>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="min-w-36 p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground">Event Types</div>
+                    <div className="space-y-3">
+                      {uniqueEventTypes.map((eventType, i) => (
+                          <div key={eventType} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`event-type-${i}`}
+                                checked={selectedEventTypes.includes(eventType)}
+                                onCheckedChange={(checked: boolean) => {
+                                  const newEventTypes = checked
+                                      ? [...selectedEventTypes, eventType]
+                                      : selectedEventTypes.filter(et => et !== eventType);
+                                  handleEventTypeFilterChange(newEventTypes);
+                                }}
+                            />
+                            <Label htmlFor={`event-type-${i}`} className="flex grow justify-between gap-2 font-normal">
+                              {eventType}
+                            </Label>
+                          </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          {/* City Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
-                City
-                {selectedCities.length > 0 && (
-                  <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* City Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                    City
+                    {selectedCities.length > 0 && (
+                        <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
                     {selectedCities.length}
                   </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Cities</div>
-                <div className="space-y-3">
-                  {filteredCities.map((city, i) => (
-                    <div key={city} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`city-${i}`}
-                        checked={selectedCities.includes(city)}
-                        onCheckedChange={(checked: boolean) => {
-                          const newCities = checked 
-                            ? [...selectedCities, city]
-                            : selectedCities.filter(c => c !== city);
-                          handleCityFilterChange(newCities);
-                        }}
-                      />
-                      <Label htmlFor={`city-${i}`} className="flex grow justify-between gap-2 font-normal">
-                        {city}
-                      </Label>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="min-w-36 p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground">Cities</div>
+                    <div className="space-y-3">
+                      {filteredCities.map((city, i) => (
+                          <div key={city} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`city-${i}`}
+                                checked={selectedCities.includes(city)}
+                                onCheckedChange={(checked: boolean) => {
+                                  const newCities = checked
+                                      ? [...selectedCities, city]
+                                      : selectedCities.filter(c => c !== city);
+                                  handleCityFilterChange(newCities);
+                                }}
+                            />
+                            <Label htmlFor={`city-${i}`} className="flex grow justify-between gap-2 font-normal">
+                              {city}
+                            </Label>
+                          </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-          {/* Date Range Filter */}
-          <Popover open={showDateRangePicker} onOpenChange={setShowDateRangePicker}>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <CalendarIcon className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
-                {dateRange?.from && dateRange?.to 
-                  ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-                  : dateRange?.from
-                  ? format(dateRange.from, "MMM dd")
-                  : "Date Range"
-                }
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <ModernDateRangePicker
-                onDateSelect={handleDateRangeChange}
-                initialValue={dateRange}
-                className="border-0 shadow-none"
-              />
-            </PopoverContent>
-          </Popover>
+              {/* Date Range Filter */}
+              <Popover open={showDateRangePicker} onOpenChange={setShowDateRangePicker}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <CalendarIcon className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                    {dateRange?.from && dateRange?.to
+                        ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                        : dateRange?.from
+                            ? format(dateRange.from, "MMM dd")
+                            : "Date Range"
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <ModernDateRangePicker
+                      onDateSelect={handleDateRangeChange}
+                      initialValue={dateRange}
+                      className="border-0 shadow-none"
+                  />
+                </PopoverContent>
+              </Popover>
 
-          {/* OB Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
-                OB
-                {selectedObs.length > 0 && (
-                  <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+              {/* OB Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                    OB
+                    {selectedObs.length > 0 && (
+                        <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
                     {selectedObs.length}
                   </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Observers</div>
-                <div className="space-y-3">
-                  {filteredObs.map((ob, i) => (
-                    <div key={ob} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`ob-${i}`}
-                        checked={selectedObs.includes(ob)}
-                        onCheckedChange={(checked: boolean) => {
-                          const newObs = checked 
-                            ? [...selectedObs, ob]
-                            : selectedObs.filter(o => o !== ob);
-                          handleObFilterChange(newObs);
-                        }}
-                      />
-                      <Label htmlFor={`ob-${i}`} className="flex grow justify-between gap-2 font-normal">
-                        {ob}
-                      </Label>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="min-w-36 p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground">Observers</div>
+                    <div className="space-y-3">
+                      {filteredObs.map((ob, i) => (
+                          <div key={ob} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`ob-${i}`}
+                                checked={selectedObs.includes(ob)}
+                                onCheckedChange={(checked: boolean) => {
+                                  const newObs = checked
+                                      ? [...selectedObs, ob]
+                                      : selectedObs.filter(o => o !== ob);
+                                  handleObFilterChange(newObs);
+                                }}
+                            />
+                            <Label htmlFor={`ob-${i}`} className="flex grow justify-between gap-2 font-normal">
+                              {ob}
+                            </Label>
+                          </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-          {/* SNG Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
-                SNG
-                {selectedSngs.length > 0 && (
-                  <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+              {/* SNG Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                    SNG
+                    {selectedSngs.length > 0 && (
+                        <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
                     {selectedSngs.length}
                   </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">SNGs</div>
-                <div className="space-y-3">
-                  {filteredSngs.map((sng, i) => (
-                    <div key={sng} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`sng-${i}`}
-                        checked={selectedSngs.includes(sng)}
-                        onCheckedChange={(checked: boolean) => {
-                          const newSngs = checked 
-                            ? [...selectedSngs, sng]
-                            : selectedSngs.filter(s => s !== sng);
-                          handleSngFilterChange(newSngs);
-                        }}
-                      />
-                      <Label htmlFor={`sng-${i}`} className="flex grow justify-between gap-2 font-normal">
-                        {sng}
-                      </Label>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="min-w-36 p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground">SNGs</div>
+                    <div className="space-y-3">
+                      {filteredSngs.map((sng, i) => (
+                          <div key={sng} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`sng-${i}`}
+                                checked={selectedSngs.includes(sng)}
+                                onCheckedChange={(checked: boolean) => {
+                                  const newSngs = checked
+                                      ? [...selectedSngs, sng]
+                                      : selectedSngs.filter(s => s !== sng);
+                                  handleSngFilterChange(newSngs);
+                                }}
+                            />
+                            <Label htmlFor={`sng-${i}`} className="flex grow justify-between gap-2 font-normal">
+                              {sng}
+                            </Label>
+                          </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
-        {/* Clear Filters */}
-        {hasActiveFilters && (
-          <Button variant="ghost" onClick={clearAllFilters}>
-            <CircleX size={16} strokeWidth={2} className="mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+              <Button variant="ghost" onClick={clearAllFilters}>
+                <CircleX size={16} strokeWidth={2} className="mr-2" />
+                Clear All
+              </Button>
+          )}
+        </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-        <Table className="table-fixed">
-          <TableHeader className="bg-muted/50">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} style={{ width: header.getSize() }}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-muted/50"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        {/* Table */}
+        <div className="overflow-hidden rounded-xl border border-border bg-card ">
+          <Table className="table-fixed">
+            <TableHeader className="bg-[#FBFBFB]">
+              {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="hover:bg-transparent border-b border-border">
+                    {headerGroup.headers.map((header) => (
+                        <TableHead
+                            key={header.id}
+                            style={{ width: header.getSize() }}
+                            className="h-14 text-foreground px-6 py-4 border-r border-border/30 last:border-r-0"
+                        >
+                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                              <div
+                                  className={cn(
+                                      "flex h-full cursor-pointer select-none items-center justify-between gap-2"
+                                  )}
+                                  onClick={() => header.column.toggleSorting(header.column.getIsSorted() === "asc")}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      header.column.toggleSorting(header.column.getIsSorted() === "asc");
+                                    }
+                                  }}
+                                  tabIndex={0}
+                              >
+                                <span className="font-medium">{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                                {{
+                                  asc: <ChevronUp className="shrink-0 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />,
+                                  desc: <ChevronDown className="shrink-0 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />,
+                                }[header.column.getIsSorted() as string] }
+                              </div>
+                          ) : (
+                              <span className="font-medium">{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                          )}
+                        </TableHead>
+                    ))}
+                  </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                      <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                          className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/50"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="last:py-0 px-6 py-4 text-sm border-r border-border/20 last:border-r-0">
+
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                        ))}
+                      </TableRow>
+                  ))
+              ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      No events found.
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No events found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Events count */}
-      <div className="flex items-center justify-center px-2">
-        <div className="text-sm text-muted-foreground">
-          Showing {table.getFilteredRowModel().rows.length} of {events.length} events
+        {/* Events count */}
+        <div className="flex items-center justify-center px-2">
+          <div className="text-sm text-muted-foreground">
+            Showing {table.getFilteredRowModel().rows.length} of {events.length} events
+
+          </div>
         </div>
       </div>
-    </div>
   );
 }

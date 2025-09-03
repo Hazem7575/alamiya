@@ -50,6 +50,8 @@ export const usePermissions = () => {
   const canViewDashboard = () => hasPermission('dashboard.view');
   const canViewAnalytics = () => hasPermission('dashboard.analytics');
 
+  const canViewHistory = () => hasPermission('history.view');
+
   return {
     hasPermission,
     hasAnyPermission,
@@ -77,6 +79,8 @@ export const usePermissions = () => {
     // Dashboard
     canViewDashboard,
     canViewAnalytics,
+    // History
+    canViewHistory,
     // User info
     user,
     userRole: user?.role,

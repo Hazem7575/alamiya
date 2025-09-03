@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\SngController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ActivityLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,6 +28,7 @@ Route::prefix('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::get('me', [AuthController::class, 'me'])->middleware('auth:api');
+    Route::post('change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
 });
 
 // Protected routes
@@ -74,6 +76,11 @@ Route::middleware(['api', 'auth:api'])->group(function () {
     Route::apiResource('events', EventController::class);
     Route::get('calendar', [EventController::class, 'calendar']);
     Route::patch('events/{event}/status', [EventController::class, 'updateStatus']);
+    
+    // Activity Logs routes
+    Route::get('activity-logs', [ActivityLogController::class, 'index']);
+    Route::get('activity-logs/all', [ActivityLogController::class, 'all']);
+    Route::get('activity-logs/stats', [ActivityLogController::class, 'stats']);
     
 });
 

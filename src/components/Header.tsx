@@ -1,4 +1,4 @@
-import { Building2, User, LogOut } from 'lucide-react';
+import { Building2, User, LogOut, Lock } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
+import { useState } from 'react';
 
 interface HeaderProps {
   title: string;
@@ -20,9 +22,14 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, showNavigation = true }: HeaderProps) {
   const { user, logout } = useAuth();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleChangePassword = () => {
+    setIsPasswordDialogOpen(true);
   };
 
   const getUserInitials = (name: string) => {
@@ -70,12 +77,16 @@ export function Header({ title, subtitle, showNavigation = true }: HeaderProps) 
                     </p>
                     {user.role && (
                       <p className="text-xs leading-none text-muted-foreground">
-                        Role: {user.role}
+                        Role: {typeof user.role === 'string' ? user.role : user.role.name}
                       </p>
                     )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleChangePassword}>
+                  <Lock className="mr-2 h-4 w-4" />
+                  <span>Change Password</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -85,6 +96,12 @@ export function Header({ title, subtitle, showNavigation = true }: HeaderProps) 
           )}
         </div>
       )}
+      
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog 
+        open={isPasswordDialogOpen} 
+        onOpenChange={setIsPasswordDialogOpen} 
+      />
     </div>
   );
 }
