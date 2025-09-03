@@ -325,7 +325,7 @@ const History = () => {
                     <SelectItem value="Role">Role</SelectItem>
                     <SelectItem value="City">City</SelectItem>
                     <SelectItem value="Venue">Venue</SelectItem>
-                    <SelectItem value="Observer">Observer</SelectItem>
+                    <SelectItem value="Observer">Ob</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

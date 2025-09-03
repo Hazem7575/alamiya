@@ -53,35 +53,202 @@ class ActivityLog extends Model
      */
     public static function generateDescription(string $action, ?Model $model = null, ?array $context = null): string
     {
-        $modelName = $model ? class_basename($model) : 'Item';
-        $itemName = '';
-
-        // Try to get a meaningful name for the item
-        if ($model) {
-            if (isset($model->name)) {
-                $itemName = " '{$model->name}'";
-            } elseif (isset($model->title)) {
-                $itemName = " '{$model->title}'";
-            } elseif (isset($model->email)) {
-                $itemName = " '{$model->email}'";
-            } elseif ($model->id) {
-                $itemName = " (ID: {$model->id})";
-            }
+        if (!$model) {
+            return "Performed {$action} action";
         }
 
-        $descriptions = [
-            'created' => "Created new {$modelName}{$itemName}",
-            'updated' => "Updated {$modelName}{$itemName}",
-            'deleted' => "Deleted {$modelName}{$itemName}",
-            'restored' => "Restored {$modelName}{$itemName}",
-            'viewed' => "Viewed {$modelName}{$itemName}",
-            'login' => "Logged into the system",
-            'logout' => "Logged out of the system",
-            'password_changed' => "Changed account password",
-            'status_changed' => "Changed status of {$modelName}{$itemName}",
-            'permissions_changed' => "Changed permissions of {$modelName}{$itemName}",
-        ];
+        $modelName = class_basename($model);
+        
+        // Generate detailed descriptions based on model type
+        switch ($modelName) {
+            case 'Observer':
+                return static::generateObserverDescription($action, $model);
+            case 'CityDistance':
+                return static::generateCityDistanceDescription($action, $model);
+            case 'City':
+                return static::generateCityDescription($action, $model);
+            case 'Venue':
+                return static::generateVenueDescription($action, $model);
+            case 'EventType':
+                return static::generateEventTypeDescription($action, $model);
+            case 'User':
+                return static::generateUserDescription($action, $model);
+            case 'Sng':
+                return static::generateSngDescription($action, $model);
+            case 'Generator':
+                return static::generateGeneratorDescription($action, $model);
+            case 'Role':
+                return static::generateRoleDescription($action, $model);
+            case 'Event':
+                return static::generateEventDescription($action, $model);
+            default:
+                return static::generateDefaultDescription($action, $model);
+        }
+    }
 
-        return $descriptions[$action] ?? "Performed {$action} action on {$modelName}{$itemName}";
+    private static function generateObserverDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created new observer: {$model->code}";
+            case 'updated':
+                return "Updated observer: {$model->code}";
+            case 'deleted':
+                return "Deleted observer: {$model->code}";
+            default:
+                return "Performed {$action} on observer: {$model->code}";
+        }
+    }
+
+    private static function generateCityDistanceDescription(string $action, Model $model): string
+    {
+        $model->load(['fromCity', 'toCity']);
+        $fromCity = $model->fromCity->name ?? 'Unknown';
+        $toCity = $model->toCity->name ?? 'Unknown';
+        $hours = $model->travel_time_hours;
+
+        switch ($action) {
+            case 'created':
+                return "Created travel time between {$fromCity} and {$toCity}: {$hours} hours";
+            case 'updated':
+                return "Updated travel time between {$fromCity} and {$toCity}: {$hours} hours";
+            case 'deleted':
+                return "Deleted travel time between {$fromCity} and {$toCity} ({$hours} hours)";
+            default:
+                return "Performed {$action} on travel time between {$fromCity} and {$toCity}";
+        }
+    }
+
+    private static function generateCityDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created new city: {$model->name}";
+            case 'updated':
+                return "Updated city: {$model->name}";
+            case 'deleted':
+                return "Deleted city: {$model->name}";
+            default:
+                return "Performed {$action} on city: {$model->name}";
+        }
+    }
+
+    private static function generateVenueDescription(string $action, Model $model): string
+    {
+        $model->load('city');
+        $cityName = $model->city->name ?? 'Unknown City';
+
+        switch ($action) {
+            case 'created':
+                return "Created new venue: {$model->name} in {$cityName}";
+            case 'updated':
+                return "Updated venue: {$model->name} in {$cityName}";
+            case 'deleted':
+                return "Deleted venue: {$model->name} in {$cityName}";
+            default:
+                return "Performed {$action} on venue: {$model->name}";
+        }
+    }
+
+    private static function generateEventTypeDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created new event type: {$model->name} ({$model->code})";
+            case 'updated':
+                return "Updated event type: {$model->name} ({$model->code})";
+            case 'deleted':
+                return "Deleted event type: {$model->name} ({$model->code})";
+            default:
+                return "Performed {$action} on event type: {$model->name}";
+        }
+    }
+
+    private static function generateUserDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created user: {$model->name} ({$model->email})";
+            case 'updated':
+                return "Updated user: {$model->name} ({$model->email})";
+            case 'deleted':
+                return "Deleted user: {$model->name} ({$model->email})";
+            default:
+                return "Performed {$action} on user: {$model->name}";
+        }
+    }
+
+    private static function generateSngDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created SNG: {$model->code}";
+            case 'updated':
+                return "Updated SNG: {$model->code}";
+            case 'deleted':
+                return "Deleted SNG: {$model->code}";
+            default:
+                return "Performed {$action} on SNG: {$model->code}";
+        }
+    }
+
+    private static function generateGeneratorDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created Generator: {$model->code}";
+            case 'updated':
+                return "Updated Generator: {$model->code}";
+            case 'deleted':
+                return "Deleted Generator: {$model->code}";
+            default:
+                return "Performed {$action} on Generator: {$model->code}";
+        }
+    }
+
+    private static function generateRoleDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                $permissionsCount = count($model->permissions ?? []);
+                return "Created new role: {$model->display_name} with {$permissionsCount} permissions";
+            case 'updated':
+                return "Updated role: {$model->display_name}";
+            case 'deleted':
+                return "Deleted role: {$model->display_name}";
+            default:
+                return "Performed {$action} on role: {$model->display_name}";
+        }
+    }
+
+    private static function generateEventDescription(string $action, Model $model): string
+    {
+        switch ($action) {
+            case 'created':
+                return "Created event: {$model->title}";
+            case 'updated':
+                return "Updated event: {$model->title}";
+            case 'deleted':
+                return "Deleted event: {$model->title}";
+            default:
+                return "Performed {$action} on event: {$model->title}";
+        }
+    }
+
+    private static function generateDefaultDescription(string $action, Model $model): string
+    {
+        $modelName = class_basename($model);
+        $itemName = $model->name ?? $model->title ?? $model->email ?? "ID: {$model->id}";
+        
+        switch ($action) {
+            case 'created':
+                return "Created new {$modelName}: {$itemName}";
+            case 'updated':
+                return "Updated {$modelName}: {$itemName}";
+            case 'deleted':
+                return "Deleted {$modelName}: {$itemName}";
+            default:
+                return "Performed {$action} on {$modelName}: {$itemName}";
+        }
     }
 }

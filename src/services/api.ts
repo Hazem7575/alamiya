@@ -50,6 +50,7 @@ export interface BackendEvent {
   venue_id: number;
   observer_id: number;
   sng_id?: number;
+  generator_id?: number;
   created_by: number;
   description?: string;
   status: string;
@@ -63,6 +64,7 @@ export interface BackendEvent {
   venue?: { id: number; name: string; };
   observer?: { id: number; code: string; };
   sng?: { id: number; code: string; };
+  generator?: { id: number; code: string; };
   creator?: { id: number; name: string; };
 }
 
@@ -75,6 +77,7 @@ export interface CreateEventRequest {
   venue_id: number;
   observer_id: number;
   sng_id?: number;
+  generator_id?: number;
   description?: string;
   teams?: string[];
   metadata?: any;
@@ -98,8 +101,8 @@ export interface EventsResponse {
 
 
 
-const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
-//const API_BASE_URL = 'http://localhost:8000/api';
+//const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 class ApiClient {
   private getAuthHeaders(): Record<string, string> {
@@ -319,6 +322,9 @@ class ApiClient {
       if (filters.sngs && filters.sngs.length > 0) {
         url += `&sngs=${filters.sngs.join(',')}`;
       }
+      if (filters.generators && filters.generators.length > 0) {
+        url += `&generators=${filters.generators.join(',')}`;
+      }
       if (filters.dateRange && filters.dateRange.from && filters.dateRange.to) {
         url += `&date_from=${filters.dateRange.from}&date_to=${filters.dateRange.to}`;
       }
@@ -343,6 +349,7 @@ class ApiClient {
     venue: string;
     ob: string;
     sng: string;
+    generator: string;
   }): Promise<ApiResponse<BackendEvent>> {
     // Transform frontend data to match backend expectations
     const backendData = {
@@ -354,6 +361,7 @@ class ApiClient {
       venue: data.venue,
       observer: data.ob,
       sng: data.sng,
+      generator: data.generator,
     };
 
 
@@ -399,6 +407,8 @@ class ApiClient {
     venues: any[];
     observers: any[];
     sngs: any[];
+    generators: any[];
+    last_updated?: string;
   }>> {
     return this.fetchApi('/dashboard/data');
   }
@@ -504,6 +514,31 @@ class ApiClient {
 
   async deleteSng(id: number): Promise<ApiResponse<void>> {
     return this.fetchApi(`/sngs/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Generator CRUD operations
+  async getGenerators(): Promise<ApiResponse<Array<{ id: number; name: string; }>>> {
+    return this.fetchApi('/generators');
+  }
+
+  async createGenerator(data: { code: string }): Promise<ApiResponse<{ id: number; code: string; name: string; }>> {
+    return this.fetchApi('/generators', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateGenerator(id: number, data: { code: string }): Promise<ApiResponse<{ id: number; code: string; name: string; }>> {
+    return this.fetchApi(`/generators/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteGenerator(id: number): Promise<ApiResponse<void>> {
+    return this.fetchApi(`/generators/${id}`, {
       method: 'DELETE',
     });
   }

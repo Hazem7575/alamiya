@@ -81,11 +81,11 @@ import { useMemo, useRef, useState, useId, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO } from "date-fns";
 
-// Custom filter function for multi-column searching
-const multiColumnFilterFn: FilterFn<Event> = (row, columnId, filterValue) => {
-  const searchableRowContent = `${row.original.event} ${row.original.city} ${row.original.venue}`.toLowerCase();
+// Custom filter function for event title only searching
+const eventTitleFilterFn: FilterFn<Event> = (row, columnId, filterValue) => {
+  const eventTitle = row.original.event.toLowerCase();
   const searchTerm = (filterValue ?? "").toLowerCase();
-  return searchableRowContent.includes(searchTerm);
+  return eventTitle.includes(searchTerm);
 };
 
 const eventTypeFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
@@ -104,6 +104,11 @@ const cityFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => 
 };
 
 const sngFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
+  if (!filterValue || filterValue.length === 0) return true;
+  return filterValue.includes(row.getValue(columnId) as string);
+};
+
+const generatorFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
   return filterValue.includes(row.getValue(columnId) as string);
 };
@@ -146,6 +151,7 @@ export function EventTableGuest({
   const [selectedObs, setSelectedObs] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
+  const [selectedGenerators, setSelectedGenerators] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Search terms for filter dropdowns
@@ -153,6 +159,7 @@ export function EventTableGuest({
   const [obSearchTerm, setObSearchTerm] = useState("");
   const [citySearchTerm, setCitySearchTerm] = useState("");
   const [sngSearchTerm, setSngSearchTerm] = useState("");
+  const [generatorSearchTerm, setGeneratorSearchTerm] = useState("");
 
   // Modern date range picker state
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
@@ -350,6 +357,27 @@ export function EventTableGuest({
       size: 100,
       filterFn: sngFilterFn,
     },
+    {
+      header: ({ column }) => {
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+            >
+              Generator
+            </Button>
+        );
+      },
+      accessorKey: "generator",
+      cell: ({ row }) => (
+          <div className="text-sm">
+            {row.getValue("generator")}
+          </div>
+      ),
+      size: 100,
+      filterFn: generatorFilterFn,
+    },
   ];
 
   // Apply filters to table columns for local filtering
@@ -371,12 +399,15 @@ export function EventTableGuest({
     if (selectedSngs.length > 0) {
       filters.push({ id: 'sng', value: selectedSngs });
     }
+    if (selectedGenerators.length > 0) {
+      filters.push({ id: 'generator', value: selectedGenerators });
+    }
     if (dateRange) {
       filters.push({ id: 'date', value: dateRange });
     }
 
     return filters;
-  }, [globalFilter, selectedEventTypes, selectedCities, selectedObs, selectedSngs, dateRange]);
+  }, [globalFilter, selectedEventTypes, selectedCities, selectedObs, selectedSngs, selectedGenerators, dateRange]);
 
   const table = useReactTable({
     data: events,
@@ -399,7 +430,7 @@ export function EventTableGuest({
     manualSorting: false, // تفعيل الفرز المحلي
     manualPagination: false,
     enableGlobalFilter: true,
-    globalFilterFn: multiColumnFilterFn,
+    globalFilterFn: eventTitleFilterFn,
     // تفعيل الفرز متعدد الأعمدة
     enableMultiSort: true,
   });
@@ -517,7 +548,7 @@ export function EventTableGuest({
                     className="min-w-60 ps-9"
                     value={globalFilter}
                     onChange={(e) => handleGlobalFilterChange(e.target.value)}
-                    placeholder="Search events, cities, venues..."
+                    placeholder="Search events..."
                     type="text"
                 />
                 <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
@@ -648,7 +679,7 @@ export function EventTableGuest({
                 </PopoverTrigger>
                 <PopoverContent className="min-w-36 p-3" align="start">
                   <div className="space-y-3">
-                    <div className="text-xs font-medium text-muted-foreground">Observers</div>
+                    <div className="text-xs font-medium text-muted-foreground">Ob</div>
                     <div className="space-y-3">
                       {filteredObs.map((ob, i) => (
                           <div key={ob} className="flex items-center gap-2">

@@ -43,6 +43,7 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     venue: backendEvent.venue?.name || '-',
     ob: backendEvent.observer?.code || '-',
     sng: backendEvent.sng?.code || '-',
+    generator: backendEvent.generator?.code || '-',
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };
@@ -229,11 +230,21 @@ const GuestDashboard = () => {
           <div className="flex items-center justify-center w-16 h-16  mr-4">
             <img src="/alamiya-logo.png" alt=""/>
           </div>
-          <div>
+          <div className="text-center">
             <h1 className="text-4xl font-bold text-foreground !text-[30px]">Alamiya Calendar</h1>
-            <p className="text-xl text-muted-foreground !text-[15px]">Discover Alamiya’s Latest Projects Step by Step</p>
+            <p className="text-xl text-muted-foreground !text-[15px]">Discover Alamiya's Latest Projects Step by Step</p>
           </div>
         </div>
+        
+        {/* Last Updated */}
+        {dashboardData?.last_updated && (
+          <div className="flex justify-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              Last Updated: {new Date(dashboardData.last_updated).toLocaleString()}
+            </p>
+          </div>
+        )}
+        
         {/* View Toggle */}
         <div className="flex justify-center mb-8">
           <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
@@ -241,8 +252,10 @@ const GuestDashboard = () => {
 
         {/* Main Content */}
         {renderView()}
-        
 
+        <footer className="mt-16 py-6 text-center border-t border-border">
+          <p className="text-xs text-muted-foreground">Powered by Konhub</p>
+        </footer>
       </div>
     </div>
   );

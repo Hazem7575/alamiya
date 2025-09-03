@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Venue;
 use App\Http\Resources\VenueResource;
+use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class VenueController extends Controller
 {
+    use LogsActivity;
     public function index(Request $request): JsonResponse
     {
         $query = Venue::with('city');

@@ -19,6 +19,7 @@ class Event extends Model
         'venue_id',
         'observer_id',
         'sng_id',
+        'generator_id',
         'created_by',
         'description',
         'status',
@@ -56,6 +57,11 @@ class Event extends Model
     public function sng(): BelongsTo
     {
         return $this->belongsTo(Sng::class);
+    }
+
+    public function generator(): BelongsTo
+    {
+        return $this->belongsTo(Generator::class);
     }
 
     public function creator(): BelongsTo

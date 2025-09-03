@@ -35,6 +35,7 @@ export function EditEventDialog({
   const [venue, setVenue] = useState('');
   const [ob, setOb] = useState('');
   const [sng, setSng] = useState('');
+  const [generator, setGenerator] = useState('');
   const [time, setTime] = useState('');
   
   // ✅ استخدام useUpdateEvent hook مباشرة
@@ -52,6 +53,7 @@ export function EditEventDialog({
       setVenue(event.venue);
       setOb(event.ob);
       setSng(event.sng || '');
+      setGenerator(event.generator || '');
       setTime(event.time);
     }
   }, [event, isOpen]);
@@ -59,7 +61,7 @@ export function EditEventDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !eventName || !eventType || !city || !venue || !ob || !time) {
+    if (!date || !eventName || !eventType || !city || !venue || !ob || !time || !sng || !generator) {
       toast({
         title: "Error",
         description: "Please fill in all required fields.",
@@ -77,6 +79,7 @@ export function EditEventDialog({
       const venueId = dropdownConfig.venues.find(v => v.value === venue)?.id;
       const observerId = dropdownConfig.obs.find(o => o.value === ob)?.id;
       const sngId = dropdownConfig.sngs?.find(s => s.value === sng)?.id;
+      const generatorId = dropdownConfig.generators?.find(g => g.value === generator)?.id;
 
       console.log('Dropdown config SNGs:', dropdownConfig.sngs);
       console.log('SNG value in form:', sng);
@@ -91,7 +94,8 @@ export function EditEventDialog({
         city_id: cityId ? parseInt(cityId) : undefined,
         venue_id: venueId ? parseInt(venueId) : undefined,
         observer_id: observerId ? parseInt(observerId) : undefined,
-        sng_id: sngId ? parseInt(sngId) : null
+        sng_id: sngId ? parseInt(sngId) : null,
+        generator_id: generatorId ? parseInt(generatorId) : null
       };
 
       console.log('Sending update data:', updateData);
@@ -115,6 +119,7 @@ export function EditEventDialog({
           venue,
           ob,
           sng,
+          generator,
           time,
           updatedAt: new Date().toISOString(),
         };
@@ -135,6 +140,7 @@ export function EditEventDialog({
     setVenue('');
     setOb('');
     setSng('');
+    setGenerator('');
     setTime('');
   };
 
@@ -251,10 +257,10 @@ export function EditEventDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ob">Observer *</Label>
+              <Label htmlFor="ob">Ob *</Label>
               <Select value={ob} onValueChange={setOb}>
                 <SelectTrigger className=" transition-all">
-                  <SelectValue placeholder="Select observer" />
+                  <SelectValue placeholder="Select Ob" />
                 </SelectTrigger>
                 <SelectContent>
                   {dropdownConfig.obs.map((observer) => (
@@ -267,15 +273,31 @@ export function EditEventDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sng">SNG</Label>
+              <Label htmlFor="sng">SNG *</Label>
               <Select value={sng} onValueChange={setSng}>
                 <SelectTrigger className=" transition-all">
-                  <SelectValue placeholder="Select SNG" />
+                  <SelectValue placeholder="Select SNG *" />
                 </SelectTrigger>
                 <SelectContent>
                   {dropdownConfig.sngs?.map((sngOption) => (
                     <SelectItem key={sngOption.id} value={sngOption.value}>
                       {sngOption.label}
+                    </SelectItem>
+                  )) || []}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="generator">Generator *</Label>
+              <Select value={generator} onValueChange={setGenerator}>
+                <SelectTrigger className=" transition-all">
+                  <SelectValue placeholder="Select Generator *" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dropdownConfig.generators?.map((generatorOption) => (
+                    <SelectItem key={generatorOption.id} value={generatorOption.value}>
+                      {generatorOption.label}
                     </SelectItem>
                   )) || []}
                 </SelectContent>

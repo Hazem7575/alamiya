@@ -126,6 +126,7 @@ interface EventTableProps {
   venues?: any[];
   observers?: any[];
   sngs?: any[];
+  generators?: any[];
   onDeleteEvents?: (eventIds: string[]) => void;
   onEditEvent?: (event: Event) => void;
   onUpdateEvent?: (event: Event) => void;
@@ -137,6 +138,7 @@ interface EventTableProps {
     cities: string[];
     observers: string[];
     sngs: string[];
+    generators: string[];
     dateRange: any;
   };
   onSearchChange?: (search: string) => void;
@@ -144,6 +146,7 @@ interface EventTableProps {
   onCityFilter?: (cities: string[]) => void;
   onObserverFilter?: (observers: string[]) => void;
   onSngFilter?: (sngs: string[]) => void;
+  onGeneratorFilter?: (generators: string[]) => void;
   onDateRangeFilter?: (dateRange: any) => void;
   // Sort props
   sorting?: {
@@ -179,6 +182,7 @@ export function EventTable({
   venues = [],
   observers = [],
   sngs = [],
+  generators = [],
   onDeleteEvents, 
   onEditEvent, 
   onUpdateEvent, 
@@ -190,6 +194,7 @@ export function EventTable({
   onCityFilter,
   onObserverFilter,
   onSngFilter,
+  onGeneratorFilter,
   onDateRangeFilter,
   // Sort props
   sorting,
@@ -225,9 +230,11 @@ export function EventTable({
   const [selectedObs, setSelectedObs] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
+  const [selectedGenerators, setSelectedGenerators] = useState<string[]>([]);
   const [obSearchTerm, setObSearchTerm] = useState('');
   const [citySearchTerm, setCitySearchTerm] = useState('');
   const [sngSearchTerm, setSngSearchTerm] = useState('');
+  const [generatorSearchTerm, setGeneratorSearchTerm] = useState('');
   
   // Edit modal state
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -581,7 +588,7 @@ export function EventTable({
           <div 
             className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
             onClick={() => canEditEvents() && handleStartEdit(row.id, "ob", row.getValue("ob"))}
-            title={canEditEvents() ? "Click to edit observer" : "No permission to edit"}
+            title={canEditEvents() ? "Click to edit Obs" : "No permission to edit"}
           >
             {row.getValue("ob")}
           </div>
@@ -632,6 +639,54 @@ export function EventTable({
             title={canEditEvents() ? "Click to edit SNG" : "No permission to edit"}
           >
             {row.getValue("sng")}
+          </div>
+        );
+      },
+      size: 100,
+    },
+    {
+      header: "Generator",
+      accessorKey: "generator",
+      cell: ({ row }) => {
+        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "generator";
+        return isEditing ? (
+          <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-8 w-full justify-between">
+                {editValue || row.getValue("generator")}
+                <span className="ml-2">▼</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-32 p-0 bg-popover border border-border z-50">
+              <Command>
+                <CommandInput placeholder="Search Generator..." />
+                <CommandList>
+                  <CommandEmpty>No Generator found.</CommandEmpty>
+                  <CommandGroup>
+                    {generators.map((generator) => (
+                      <CommandItem
+                        key={generator.id}
+                        value={generator.name}
+                        onSelect={() => {
+                          setEditValue(generator.name);
+                          handleSaveEdit(row.original, "generator", generator.name);
+                        }}
+                      >
+                        {generator.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div 
+            className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+            onClick={() => canEditEvents() && handleStartEdit(row.id, "generator", row.getValue("generator"))}
+            title={canEditEvents() ? "Click to edit Generator" : "No permission to edit"}
+          >
+            {row.getValue("generator")}
           </div>
         );
       },
@@ -722,6 +777,9 @@ export function EventTable({
     if (filters?.sngs) {
       setSelectedSngs(filters.sngs);
     }
+    if (filters?.generators) {
+      setSelectedGenerators(filters.generators);
+    }
   }, [filters]);
   
   // Events are already filtered by backend, no need for client-side filtering
@@ -759,6 +817,10 @@ export function EventTable({
     sngs?.map(s => s.name).filter(Boolean) || [], 
     [sngs]
   );
+  const uniqueGenerators = useMemo(() => 
+    generators?.map(g => g.name).filter(Boolean) || [], 
+    [generators]
+  );
   const uniqueEventTypes = useMemo(() => 
     eventTypes?.map(et => et.name).filter(Boolean) || [], 
     [eventTypes]
@@ -785,6 +847,9 @@ export function EventTable({
   );
   const filteredSngs = uniqueSngs.filter(sng => 
     sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
+  );
+  const filteredGenerators = uniqueGenerators.filter(generator => 
+    generator.toLowerCase().includes(generatorSearchTerm.toLowerCase())
   );
 
   const selectedEventTypes = useMemo(() => {
@@ -844,6 +909,18 @@ export function EventTable({
     setSelectedSngs(newSelectedSngs);
     // Call the backend filter handler
     onSngFilter?.(newSelectedSngs);
+  };
+
+  const handleGeneratorChange = (generator: string, checked: boolean) => {
+    let newSelectedGenerators: string[];
+    if (checked) {
+      newSelectedGenerators = [...selectedGenerators, generator];
+    } else {
+      newSelectedGenerators = selectedGenerators.filter(g => g !== generator);
+    }
+    setSelectedGenerators(newSelectedGenerators);
+    // Call the backend filter handler
+    onGeneratorFilter?.(newSelectedGenerators);
   };
 
   // Date range filter logic with calendar
@@ -1082,6 +1159,51 @@ export function EventTable({
               </PopoverContent>
             </Popover>
 
+            {/* Generator Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <Filter
+                    className="-ms-1 me-2 opacity-60"
+                    size={16}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                  Generator
+                  {selectedGenerators.length > 0 && (
+                    <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                      {selectedGenerators.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-0" align="start">
+                <div className="p-3 space-y-3">
+                  <Input
+                    placeholder="Search Generator..."
+                    value={generatorSearchTerm}
+                    onChange={(e) => setGeneratorSearchTerm(e.target.value)}
+                    className="h-8"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-2">
+                    {filteredGenerators.map((generator) => (
+                      <div key={generator} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`generator-${generator}`}
+                          checked={selectedGenerators.includes(generator)}
+                          onCheckedChange={(checked) => handleGeneratorChange(generator, !!checked)}
+                        />
+                        <Label htmlFor={`generator-${generator}`} className="text-sm">{generator}</Label>
+                      </div>
+                    ))}
+                    {filteredGenerators.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-2">No Generators found</p>
+                    )}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {/* City Filter */}
             <Popover>
               <PopoverTrigger asChild>
@@ -1172,7 +1294,8 @@ export function EventTable({
                     cities: cities.map(c => ({ id: c.id?.toString(), value: c.name, label: c.name })),
                     venues: venues.map(v => ({ id: v.id?.toString(), value: v.name, label: v.name })),
                     obs: observers.map(o => ({ id: o.id?.toString(), value: o.code || o.name, label: o.code || o.name })),
-                    sngs: sngs?.map(s => ({ id: s.id?.toString(), value: s.name, label: s.name })) || []
+                    sngs: sngs?.map(s => ({ id: s.id?.toString(), value: s.name, label: s.name })) || [],
+                    generators: generators?.map(g => ({ id: g.id?.toString(), value: g.name, label: g.name })) || []
                   }}
                   onAddEvent={onAddEvent}
                 />
@@ -1432,7 +1555,8 @@ export function EventTable({
           cities: cities.map(c => ({ id: c.id?.toString(), value: c.name, label: c.name })),
           venues: venues.map(v => ({ id: v.id?.toString(), value: v.name, label: v.name })),
           obs: observers.map(o => ({ id: o.id?.toString(), value: o.code, label: o.code})),
-          sngs: sngs?.map(s => ({ id: s.id?.toString(), value: s.name, label: s.name })) || []
+          sngs: sngs?.map(s => ({ id: s.id?.toString(), value: s.name, label: s.name })) || [],
+          generators: generators?.map(g => ({ id: g.id?.toString(), value: g.name, label: g.name })) || []
         }}
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}

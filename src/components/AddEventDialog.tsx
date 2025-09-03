@@ -37,6 +37,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
   const [venue, setVenue] = useState('');
   const [ob, setOb] = useState('');
   const [sng, setSng] = useState('');
+  const [generator, setGenerator] = useState('');
   const [time, setTime] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,10 +53,10 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
       return;
     }
     
-    if (!date || !eventName || !eventType || !city || !venue || !ob || !time || !sng) {
+    if (!date || !eventName || !eventType) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields (Date, Event Name, Event Type).",
         variant: "destructive",
       });
       return;
@@ -63,13 +64,14 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
 
     const eventData = {
       date: format(date, 'yyyy-MM-dd'),
-      time: time,
+      time: time || '00:00',
       event: eventName,
       eventType: eventType,
-      city: city,
-      venue: venue,
-      ob: ob,
-      sng: sng,
+      city: city || '',
+      venue: venue || '',
+      ob: ob || '',
+      sng: sng || '',
+      generator: generator || '',
     };
 
     try {
@@ -88,6 +90,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
       setVenue('');
       setOb('');
       setSng('');
+      setGenerator('');
       setTime('');
       setOpen(false);
     } catch (error) {
@@ -167,10 +170,10 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="city">City *</Label>
+            <Label htmlFor="city">City</Label>
             <Select value={city} onValueChange={setCity}>
               <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select city" />
+                <SelectValue placeholder="Select city (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {dropdownConfig.cities.map((cityOption) => (
@@ -184,10 +187,10 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="venue">Venue *</Label>
+            <Label htmlFor="venue">Venue</Label>
             <Select value={venue} onValueChange={setVenue}>
               <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select venue" />
+                <SelectValue placeholder="Select venue (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {dropdownConfig.venues.map((venueOption) => (
@@ -201,7 +204,7 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="time">Time (24H) *</Label>
+            <Label htmlFor="time">Time (24H)</Label>
             <Input
               id="time"
               type="time"
@@ -213,10 +216,10 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ob">OB *</Label>
+            <Label htmlFor="ob">OB</Label>
             <Select value={ob} onValueChange={setOb}>
               <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select OB" />
+                <SelectValue placeholder="Select OB (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {dropdownConfig.obs.map((obOption) => (
@@ -233,12 +236,29 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
             <Label htmlFor="sng">SNG</Label>
             <Select value={sng} onValueChange={setSng}>
               <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select SNG " />
+                <SelectValue placeholder="Select SNG (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {dropdownConfig.sngs?.map((sngOption) => (
                   <SelectItem key={sngOption.id} value={sngOption.value}>
                     {sngOption.label}
+                  </SelectItem>
+                )) || []}
+              </SelectContent>
+            </Select>
+
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="generator">Generator</Label>
+            <Select value={generator} onValueChange={setGenerator}>
+              <SelectTrigger className=" transition-all">
+                <SelectValue placeholder="Select Generator (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {dropdownConfig.generators?.map((generatorOption) => (
+                  <SelectItem key={generatorOption.id} value={generatorOption.value}>
+                    {generatorOption.label}
                   </SelectItem>
                 )) || []}
               </SelectContent>

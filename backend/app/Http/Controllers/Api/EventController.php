@@ -10,6 +10,7 @@ use App\Models\CityDistance;
 use App\Models\Venue;
 use App\Models\Observer;
 use App\Models\Sng;
+use App\Models\Generator;
 use App\Events\EventUpdated;
 use App\Events\EventDeleted;
 
@@ -24,7 +25,7 @@ class EventController extends Controller
     use LogsActivity;
     public function index(Request $request): JsonResponse
     {
-        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
+        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator']);
 
         // Filter by date range
         if ($request->has('start_date') && $request->has('end_date')) {
@@ -56,19 +57,7 @@ class EventController extends Controller
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhereHas('eventType', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('city', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('venue', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('observer', function ($q) use ($search) {
-                      $q->where('code', 'like', "%{$search}%");
-                  });
+                $q->where('title', 'like', "%{$search}%");
             });
         }
 
@@ -104,6 +93,14 @@ class EventController extends Controller
             });
         }
 
+        // Filter by Generators
+        if ($request->has('generators') && !empty($request->generators)) {
+            $generators = explode(',', $request->generators);
+            $query->whereHas('generator', function ($q) use ($generators) {
+                $q->whereIn('code', $generators);
+            });
+        }
+
         // Filter by date range
         if ($request->has('date_from') && $request->has('date_to')) {
             $query->whereBetween('event_date', [$request->date_from, $request->date_to]);
@@ -120,7 +117,7 @@ class EventController extends Controller
 
             switch ($sortField) {
                 case 'date':
-                    $query->orderBy('event_date', $sortDirection);
+                    $query->orderBy('event_date', $sortDirection)->orderBy('event_time', $sortDirection);
                     break;
                 case 'time':
                     $query->orderBy('event_time', $sortDirection);
@@ -153,17 +150,23 @@ class EventController extends Controller
                           ->orderBy('sngs.code', $sortDirection)
                           ->select('events.*');
                     break;
+                case 'generator':
+                    $query->join('generators', 'events.generator_id', '=', 'generators.id')
+                          ->orderBy('generators.code', $sortDirection)
+                          ->select('events.*');
+                    break;
                 default:
-                    $query->orderBy('event_date', 'desc')
-                          ->orderBy('event_time', 'desc');
+                    $query->orderBy('event_date', 'asc')
+                          ->orderBy('event_time', 'asc');
                     break;
             }
         } else {
-            $query->orderBy('event_date', 'desc')
-                  ->orderBy('event_time', 'desc');
+            // Default sorting: Date and Time ascending (oldest first)
+            $query->orderBy('event_date', 'asc')
+                  ->orderBy('event_time', 'asc');
         }
 
-        $events = $query->with(['eventType', 'city', 'venue', 'observer', 'sng', 'creator'])->paginate($perPage);
+        $events = $query->with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator'])->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -191,12 +194,13 @@ class EventController extends Controller
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'event_date' => 'required|date',
-                'event_time' => 'required|date_format:H:i',
+                'event_time' => 'nullable|date_format:H:i',
                 'event_type' => 'required|string',
-                'city' => 'required|string',
-                'venue' => 'required|string',
-                'observer' => 'required|string',
+                'city' => 'nullable|string',
+                'venue' => 'nullable|string',
+                'observer' => 'nullable|string',
                 'sng' => 'nullable|string',
+                'generator' => 'nullable|string',
                 'description' => 'nullable|string',
                 'teams' => 'nullable|array',
                 'metadata' => 'nullable|array'
@@ -208,17 +212,26 @@ class EventController extends Controller
                 'color' => '#' . substr(md5($validated['event_type']), 0, 6)
             ]);
 
-            // Find or create city
-            $city = City::firstOrCreate(['name' => $validated['city']]);
+            // Find or create city (optional)
+            $city = null;
+            if (!empty($validated['city'])) {
+                $city = City::firstOrCreate(['name' => $validated['city']]);
+            }
 
-            // Find or create venue
-            $venue = Venue::firstOrCreate(
-                ['name' => $validated['venue']],
-                ['city_id' => $city->id]
-            );
+            // Find or create venue (optional)
+            $venue = null;
+            if (!empty($validated['venue']) && $city) {
+                $venue = Venue::firstOrCreate(
+                    ['name' => $validated['venue']],
+                    ['city_id' => $city->id]
+                );
+            }
 
-            // Find or create observer
-            $observer = Observer::firstOrCreate(['code' => $validated['observer']]);
+            // Find or create observer (optional)
+            $observer = null;
+            if (!empty($validated['observer'])) {
+                $observer = Observer::firstOrCreate(['code' => $validated['observer']]);
+            }
 
             // Find or create SNG
             $sng = null;
@@ -226,29 +239,37 @@ class EventController extends Controller
                 $sng = Sng::firstOrCreate(['code' => $validated['sng']]);
             }
 
-            // Check OB conflicts before creating
-            $obConflictValidation = $this->validateObserverConflict(
-                $observer->id,
-                $validated['event_date'],
-                $validated['event_time'],
-                $city->id
-            );
-
-            if (!$obConflictValidation['valid']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $obConflictValidation['message'],
-                    'error_type' => 'observer_conflict',
-                    'details' => $obConflictValidation['details']
-                ], 422);
+            // Find or create Generator
+            $generator = null;
+            if (!empty($validated['generator'])) {
+                $generator = Generator::firstOrCreate(['code' => $validated['generator']]);
             }
 
-            // Check SNG conflicts before creating (if SNG is provided)
-            if ($sng) {
+            // Check OB conflicts before creating (only if observer and city are provided)
+            if ($observer && $city) {
+                $obConflictValidation = $this->validateObserverConflict(
+                    $observer->id,
+                    $validated['event_date'],
+                    $validated['event_time'] ?? '00:00',
+                    $city->id
+                );
+
+                if (!$obConflictValidation['valid']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $obConflictValidation['message'],
+                        'error_type' => 'observer_conflict',
+                        'details' => $obConflictValidation['details']
+                    ], 422);
+                }
+            }
+
+            // Check SNG conflicts before creating (if SNG and city are provided)
+            if ($sng && $city) {
                 $sngConflictValidation = $this->validateSngConflict(
                     $sng->id,
                     $validated['event_date'],
-                    $validated['event_time'],
+                    $validated['event_time'] ?? '00:00',
                     $city->id
                 );
 
@@ -267,18 +288,19 @@ class EventController extends Controller
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? '',
                 'event_date' => $validated['event_date'],
-                'event_time' => $validated['event_time'],
+                'event_time' => $validated['event_time'] ?? '00:00',
                 'event_type_id' => $eventType->id,
-                'city_id' => $city->id,
-                'venue_id' => $venue->id,
-                'observer_id' => $observer->id,
+                'city_id' => $city?->id,
+                'venue_id' => $venue?->id,
+                'observer_id' => $observer?->id,
                 'sng_id' => $sng?->id,
+                'generator_id' => $generator?->id,
                 'created_by' => auth()->id(),
                 'teams' => $validated['teams'] ?? [],
                 'metadata' => $validated['metadata'] ?? []
             ]);
 
-            $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
+            $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator']);
             // Activity logging is handled automatically by ModelActivityObserver
 
             // Broadcast creation event from Controller for reliability
@@ -330,6 +352,7 @@ class EventController extends Controller
             'venue_id' => 'sometimes|exists:venues,id',
             'sng_id' => 'sometimes|exists:sngs,id',
             'observer_id' => 'nullable|exists:observers,id',
+            'generator_id' => 'nullable|exists:generators,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:scheduled,ongoing,completed,cancelled,postponed',
             'teams' => 'nullable|array',
@@ -508,11 +531,11 @@ class EventController extends Controller
     public function destroy(Event $event): JsonResponse
     {
         // Load relationships before deletion to ensure data is available for broadcasting
-        $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng']);
-        
+        $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'generator']);
+
         // Convert to array to avoid model serialization issues
         $eventData = $eventWithRelations->toArray();
-        
+
         // Activity logging is handled automatically by ModelActivityObserver
         $event->delete();
 
@@ -579,7 +602,7 @@ class EventController extends Controller
     // Public methods for guest access
     public function publicIndex(Request $request): JsonResponse
     {
-        $query = Event::with(['eventType', 'city', 'venue', 'observer' , 'sng'])
+        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator'])
             ->where('status', 'scheduled'); // Only show scheduled events for guests
 
         // Filter by date range
@@ -607,19 +630,7 @@ class EventController extends Controller
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhereHas('eventType', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('city', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('venue', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('observer', function ($q) use ($search) {
-                      $q->where('code', 'like', "%{$search}%");
-                  });
+                $q->where('title', 'like', "%{$search}%");
             });
         }
 
@@ -692,14 +703,20 @@ class EventController extends Controller
                           ->orderBy('sngs.code', $sortDirection)
                           ->select('events.*');
                     break;
+                case 'generator':
+                    $query->join('generators', 'events.generator_id', '=', 'generators.id')
+                          ->orderBy('generators.code', $sortDirection)
+                          ->select('events.*');
+                    break;
                 default:
-                    $query->orderBy('event_date', 'desc')
-                          ->orderBy('event_time', 'desc');
+                    $query->orderBy('event_date', 'asc')
+                          ->orderBy('event_time', 'asc');
                     break;
             }
         } else {
-            $query->orderBy('event_date', 'desc')
-                  ->orderBy('event_time', 'desc');
+            // Default sorting: Date and Time ascending (oldest first)
+            $query->orderBy('event_date', 'asc')
+                  ->orderBy('event_time', 'asc');
         }
 
         // Get all events without pagination
@@ -977,7 +994,27 @@ class EventController extends Controller
                 ];
             }
 
-            // Check for direct time conflicts (same time)
+            // ✅ FIRST CHECK: Observer can only have ONE event per day (daily limit)
+            if ($observerEvents->count() > 0) {
+                $existingEvent = $observerEvents->first();
+                return [
+                    'valid' => false,
+                    'message' => sprintf(
+                        'Observer daily limit: OB is already assigned to "%s" on this date (%s). Each observer can only have one event per day.',
+                        $existingEvent->title,
+                        Carbon::parse($dateOnly)->format('Y-m-d')
+                    ),
+                    'details' => [
+                        'conflict_event' => $existingEvent->title,
+                        'conflict_city' => $existingEvent->city ? $existingEvent->city->name : 'Unknown',
+                        'conflict_date' => Carbon::parse($dateOnly)->format('Y-m-d'),
+                        'existing_events_count' => $observerEvents->count(),
+                        'error_type' => 'daily_observer_limit'
+                    ]
+                ];
+            }
+
+            // ✅ SECOND CHECK: Direct time conflicts (same time) - This code won't be reached due to daily limit
             foreach ($observerEvents as $existingEvent) {
                 $existingDateTime = $this->parseEventDateTime($existingEvent->event_date, $existingEvent->event_time);
 
@@ -986,7 +1023,7 @@ class EventController extends Controller
                     return [
                         'valid' => false,
                         'message' => sprintf(
-                            'Observer conflict: OB is already assigned to "%s" at the same time (%s)',
+                            'Ob conflict: OB is already assigned to "%s" at the same time (%s)',
                             $existingEvent->title,
                             $eventDateTime->format('Y-m-d H:i')
                         ),
@@ -1034,7 +1071,7 @@ class EventController extends Controller
                         return [
                             'valid' => false,
                             'message' => sprintf(
-                                'Observer travel conflict: OB cannot travel from %s (%s) to %s in time. Required: %.1f hours, Available: %.1f hours',
+                                'Ob travel conflict: OB cannot travel from %s (%s) to %s in time. Required: %.1f hours, Available: %.1f hours',
                                 $existingEvent->city->name,
                                 $existingDateTime->format('H:i'),
                                 City::find($cityId)->name,
@@ -1064,7 +1101,7 @@ class EventController extends Controller
                         return [
                             'valid' => false,
                             'message' => sprintf(
-                                'Observer travel conflict: OB cannot travel from %s (%s) to %s (%s) in time. Required: %.1f hours, Available: %.1f hours',
+                                'Ob travel conflict: OB cannot travel from %s (%s) to %s (%s) in time. Required: %.1f hours, Available: %.1f hours',
                                 City::find($cityId)->name,
                                 $eventDateTime->format('H:i'),
                                 $existingEvent->city->name,
@@ -1092,7 +1129,7 @@ class EventController extends Controller
             return [
                 'valid' => true,
                 'message' => sprintf(
-                    'Observer available - no conflicts found with %d existing events on this date',
+                    'Ob available - no conflicts found with %d existing events on this date',
                     $observerEvents->count()
                 ),
                 'details' => [
@@ -1102,11 +1139,11 @@ class EventController extends Controller
             ];
 
         } catch (\Exception $e) {
-            \Log::error('Observer conflict validation error: ' . $e->getMessage());
+            \Log::error('Ob conflict validation error: ' . $e->getMessage());
 
             return [
                 'valid' => true,
-                'message' => 'Observer validation failed, proceeding anyway',
+                'message' => 'Ob validation failed, proceeding anyway',
                 'details' => ['error' => $e->getMessage()]
             ];
         }

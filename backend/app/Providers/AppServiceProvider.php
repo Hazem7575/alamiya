@@ -11,6 +11,7 @@ use App\Models\Venue;
 use App\Models\Observer;
 use App\Models\EventType;
 use App\Models\Sng;
+use App\Models\Generator;
 use App\Models\CityDistance;
 use App\Observers\ModelActivityObserver;
 
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
         Observer::observe(ModelActivityObserver::class);
         EventType::observe(ModelActivityObserver::class);
         Sng::observe(ModelActivityObserver::class);
+        Generator::observe(ModelActivityObserver::class);
         CityDistance::observe(ModelActivityObserver::class);
     }
 }

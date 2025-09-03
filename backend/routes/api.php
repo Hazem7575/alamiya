@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\EventTypeController;
 use App\Http\Controllers\Api\VenueController;
 use App\Http\Controllers\Api\ObserverController;
 use App\Http\Controllers\Api\SngController;
+use App\Http\Controllers\Api\GeneratorController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AuthController;
@@ -71,6 +72,9 @@ Route::middleware(['api', 'auth:api'])->group(function () {
     
     // SNGs routes
     Route::apiResource('sngs', SngController::class);
+    
+    // Generators routes
+    Route::apiResource('generators', GeneratorController::class);
     
     // Events routes
     Route::apiResource('events', EventController::class);

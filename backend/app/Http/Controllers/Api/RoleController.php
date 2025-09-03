@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\Permission;
 use App\Http\Resources\RoleResource;
+use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class RoleController extends Controller
 {
+    use LogsActivity;
     public function index(): JsonResponse
     {
         $roles = Role::withCount('users')->orderBy('created_at', 'desc')->get();

@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CityDistance;
 use App\Models\City;
+use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class CityDistanceController extends Controller
 {
+    use LogsActivity;
     /**
      * Display a listing of city distances
      */

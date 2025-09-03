@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\EventType;
 use App\Http\Resources\EventTypeResource;
+use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class EventTypeController extends Controller
 {
+    use LogsActivity;
     public function index(): JsonResponse
     {
         $eventTypes = EventType::withCount('events')->orderBy('name')->get();
@@ -156,7 +158,6 @@ class EventTypeController extends Controller
                 ], 422);
             }
 
-            $eventTypeName = $eventType->name;
             $eventType->delete();
 
             return response()->json([

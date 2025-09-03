@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DropdownConfig } from '@/types';
 import { User } from '@/types/user';
 import { Settings as SettingsIcon, Database, Users, MapPin, Building, Loader2, Lock, ShieldAlert, Shield } from 'lucide-react';
-import { useEventTypes, useVenues, useObservers, useCities, useSngs } from '@/hooks/useApi';
+import { useEventTypes, useVenues, useObservers, useCities, useSngs, useGenerators } from '@/hooks/useApi';
 import { mockUsers, mockRoles } from '@/data/mockUsers';
 
 type TabType = 'dropdowns' | 'cities' | 'distances' | 'users' | 'permissions';
@@ -74,6 +74,10 @@ const Settings = () => {
   });
   
   const { data: sngsResponse, isLoading: sngsLoading } = useSngs({
+    enabled: false // Load only when specifically requested
+  });
+  
+  const { data: generatorsResponse, isLoading: generatorsLoading } = useGenerators({
     enabled: false // Load only when specifically requested
   });
 
@@ -136,15 +140,20 @@ const Settings = () => {
         id: sng.id.toString(),
         value: sng.name,
         label: sng.name
+      })) : [],
+      generators: generatorsResponse?.success ? generatorsResponse.data.map(generator => ({
+        id: generator.id.toString(),
+        value: generator.name,
+        label: generator.name
       })) : []
     };
-  }, [eventTypesResponse, citiesResponse, venuesResponse, observersResponse, sngsResponse]);
+  }, [eventTypesResponse, citiesResponse, venuesResponse, observersResponse, sngsResponse, generatorsResponse]);
 
   // Loading states per tab
   const getTabLoadingState = (tab: TabType) => {
     switch (tab) {
       case 'dropdowns':
-        return eventTypesLoading || venuesLoading || observersLoading || sngsLoading || (citiesLoading && activeTab === 'dropdowns');
+        return eventTypesLoading || venuesLoading || observersLoading || sngsLoading || generatorsLoading || (citiesLoading && activeTab === 'dropdowns');
       case 'cities':
         return citiesLoading;
       case 'distances':

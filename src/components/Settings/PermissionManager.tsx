@@ -65,9 +65,9 @@ const PERMISSION_CATEGORIES = {
     permissions: ['event_types.view', 'event_types.create', 'event_types.edit', 'event_types.delete']
   },
   observers: {
-    label: 'Observers Management',
+    label: 'Ob Management',
     icon: Eye,
-    description: 'Permissions for managing observers and monitoring',
+    description: 'Permissions for managing Ob and monitoring',
     permissions: ['observers.view', 'observers.create', 'observers.edit', 'observers.delete']
   },
   dashboard: {

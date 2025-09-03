@@ -261,6 +261,7 @@ export function useCreateEvent() {
       venue: string;
       ob: string;
       sng: string;
+      generator: string;
     }) => apiClient.createEvent(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -654,11 +655,11 @@ export function useCreateObserver() {
       queryClient.invalidateQueries({ queryKey: ['observers'] });
       toast({
         title: "Success",
-        description: "Observer created successfully",
+        description: "Ob created successfully",
       });
     },
     onError: (error: any) => {
-      let errorMessage = "Failed to create observer";
+      let errorMessage = "Failed to create ob";
       let errorDetails = "";
       
       if (error?.response?.data) {
@@ -677,7 +678,7 @@ export function useCreateObserver() {
       
       toast({
         variant: "destructive",
-        title: "Unable to Create Observer",
+        title: "Unable to Create Ob",
         description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
       });
     },
@@ -694,7 +695,7 @@ export function useUpdateObserver() {
       queryClient.invalidateQueries({ queryKey: ['observers'] });
       toast({
         title: "Success",
-        description: "Observer updated successfully",
+        description: "Ob updated successfully",
       });
     },
     onError: (error: any) => {
@@ -869,6 +870,135 @@ export function useDeleteSng() {
       toast({
         variant: "destructive",
         title: "Unable to Delete SNG",
+        description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
+      });
+    },
+  });
+}
+
+// Generator hooks
+export function useGenerators(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['generators'],
+    queryFn: () => apiClient.getGenerators(),
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    enabled: options?.enabled !== false, // Default to true
+  });
+}
+
+export function useCreateGenerator() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: { code: string }) => 
+      apiClient.createGenerator(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['generators'] });
+      toast({
+        title: "Success",
+        description: "Generator created successfully",
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to create Generator";
+      let errorDetails = "";
+      
+      const data = error?.response?.data;
+      if (data?.details) {
+        errorDetails = data.details || "";
+        errorMessage = data.message || errorMessage;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        if (error.response.data.errors) {
+          const errorKeys = Object.keys(error.response.data.errors);
+          if (errorKeys.length > 0) {
+            errorDetails = error.response.data.errors[errorKeys[0]][0];
+          }
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Unable to Create Generator",
+        description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
+      });
+    },
+  });
+}
+
+export function useUpdateGenerator() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, code }: { id: number; code: string }) => 
+      apiClient.updateGenerator(id, { code }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['generators'] });
+      toast({
+        title: "Success",
+        description: "Generator updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to update Generator";
+      let errorDetails = "";
+      
+      const data = error?.response?.data;
+      if (data?.details) {
+        errorDetails = data.details || "";
+        errorMessage = data.message || errorMessage;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        if (error.response.data.errors) {
+          const errorKeys = Object.keys(error.response.data.errors);
+          if (errorKeys.length > 0) {
+            errorDetails = error.response.data.errors[errorKeys[0]][0];
+          }
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Unable to Update Generator",
+        description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
+      });
+    },
+  });
+}
+
+export function useDeleteGenerator() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteGenerator(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['generators'] });
+      toast({
+        title: "Success",
+        description: "Generator deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to delete Generator";
+      let errorDetails = "";
+      
+      const data = error?.response?.data;
+      if (data?.details) {
+        errorDetails = data.details || "";
+        errorMessage = data.message || errorMessage;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        if (error.response.data.errors) {
+          const errorKeys = Object.keys(error.response.data.errors);
+          if (errorKeys.length > 0) {
+            errorDetails = error.response.data.errors[errorKeys[0]][0];
+          }
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Unable to Delete Generator",
         description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
       });
     },

@@ -10,6 +10,7 @@ use App\Models\EventType;
 use App\Models\Venue;
 use App\Models\Observer;
 use App\Models\Sng;
+use App\Models\Generator;
 use App\Models\ActivityLog;
 use App\Http\Resources\EventTypeResource;
 use App\Http\Resources\ObserverResource;
@@ -114,6 +115,7 @@ class DashboardController extends Controller
         $venues = Venue::with('city')->orderBy('name')->get();
         $observers = Observer::orderBy('code')->get();
         $sngs = Sng::orderBy('code')->get();
+        $generators = Generator::orderBy('code')->get();
 
         return response()->json([
             'success' => true,
@@ -143,6 +145,14 @@ class DashboardController extends Controller
                         'name' => $sng->code,
                         'created_at' => $sng->created_at,
                         'updated_at' => $sng->updated_at,
+                    ];
+                }),
+                'generators' => $generators->map(function($generator) {
+                    return [
+                        'id' => $generator->id,
+                        'name' => $generator->code,
+                        'created_at' => $generator->created_at,
+                        'updated_at' => $generator->updated_at,
                     ];
                 }),
             ]
@@ -186,6 +196,10 @@ class DashboardController extends Controller
         $venues = Venue::with('city')->orderBy('name')->get();
         $observers = Observer::orderBy('code')->get();
         $sngs = Sng::orderBy('code')->get();
+        $generators = Generator::orderBy('code')->get();
+
+        // Get the latest updated_at from events table
+        $lastUpdated = Event::max('updated_at');
 
         return response()->json([
             'success' => true,
@@ -217,6 +231,15 @@ class DashboardController extends Controller
                         'updated_at' => $sng->updated_at,
                     ];
                 }),
+                'generators' => $generators->map(function($generator) {
+                    return [
+                        'id' => $generator->id,
+                        'name' => $generator->code,
+                        'created_at' => $generator->created_at,
+                        'updated_at' => $generator->updated_at,
+                    ];
+                }),
+                'last_updated' => $lastUpdated,
             ]
         ]);
     }

@@ -66,6 +66,7 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     venue: backendEvent.venue?.name || '-',
     ob: backendEvent.observer?.code || '-',
     sng: backendEvent.sng?.code || '',
+    generator: backendEvent.generator?.code || '',
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };
@@ -90,12 +91,13 @@ const convertFrontendToBackendEvent = (frontendEvent: Event): BackendEvent => {
     teams: [],
     metadata: [],
     created_at: frontendEvent.createdAt,
-    sng_id: parseInt(frontendEvent.sng),
     updated_at: frontendEvent.updatedAt,
     event_type: { id: 0, name: frontendEvent.eventType },
     city: { id: 0, name: frontendEvent.city },
     venue: { id: 0, name: frontendEvent.venue },
     observer: { id: 0, code: frontendEvent.ob },
+    sng: { id: 0, code: frontendEvent.sng },
+    generator: { id: 0, code: frontendEvent.generator },
   };
 };
 
@@ -140,6 +142,14 @@ const convertEventForUpdate = (event: Event, dashboardData?: any) => {
         data.sng_id = sng.id;
       }
     }
+
+    // Find generator ID
+    if (event.generator) {
+      const generator = dashboardData.generators?.find((g: any) => g.name === event.generator);
+      if (generator) {
+        data.generator_id = generator.id;
+      }
+    }
   }
 
   return data;
@@ -164,6 +174,7 @@ const Index = () => {
     cities: [] as string[],
     observers: [] as string[],
     sngs: [] as string[],
+    generators: [] as string[],
     dateRange: null as any
   });
   
@@ -671,6 +682,12 @@ const Index = () => {
     hasFiltered.current = true;
   };
 
+  const handleGeneratorFilter = (generators: string[]) => {
+    setFilters(prev => ({ ...prev, generators }));
+    setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page on filter
+    hasFiltered.current = true;
+  };
+
   const handleDateRangeFilter = (dateRange: any) => {
     setFilters(prev => ({ ...prev, dateRange }));
     setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page on filter
@@ -740,6 +757,7 @@ const Index = () => {
             venues={dashboardData?.venues || []}
             observers={dashboardData?.observers || []}
             sngs={dashboardData?.sngs || []}
+            generators={dashboardData?.generators || []}
             onDeleteEvents={handleDeleteEvents}
             onEditEvent={handleEditEvent}
             onUpdateEvent={handleUpdateEvent}
@@ -752,6 +770,7 @@ const Index = () => {
             onCityFilter={handleCityFilter}
             onObserverFilter={handleObserverFilter}
             onSngFilter={handleSngFilter}
+            onGeneratorFilter={handleGeneratorFilter}
             onDateRangeFilter={handleDateRangeFilter}
             // Sort props - now triggers backend queries
             sorting={sorting}

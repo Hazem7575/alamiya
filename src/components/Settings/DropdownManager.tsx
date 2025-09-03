@@ -25,10 +25,14 @@ import {
   useCreateSng,
   useUpdateSng,
   useDeleteSng,
+  useCreateGenerator,
+  useUpdateGenerator,
+  useDeleteGenerator,
   useCities,
   useVenues,
   useObservers,
-  useSngs
+  useSngs,
+  useGenerators
 } from '@/hooks/useApi';
 
 interface DropdownManagerProps {
@@ -66,6 +70,12 @@ export function DropdownManager({ config }: DropdownManagerProps) {
           edit: 'sngs.edit',
           delete: 'sngs.delete'
         };
+      case 'generators':
+        return {
+          create: 'generators.create',
+          edit: 'generators.edit',
+          delete: 'generators.delete'
+        };
       default:
         return { create: '', edit: '', delete: '' };
     }
@@ -95,7 +105,8 @@ export function DropdownManager({ config }: DropdownManagerProps) {
     eventTypes: '',
     venues: '',
     obs: '',
-    sngs: ''
+    sngs: '',
+    generators: ''
   });
 
   // Mutation hooks
@@ -111,6 +122,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
   const createSng = useCreateSng();
   const updateSng = useUpdateSng();
   const deleteSng = useDeleteSng();
+  const createGenerator = useCreateGenerator();
+  const updateGenerator = useUpdateGenerator();
+  const deleteGenerator = useDeleteGenerator();
   
   // Conditional data fetching for venues and observers
   const { data: citiesResponse } = useCities();
@@ -122,6 +136,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
   });
   const { data: sngsResponse, isLoading: sngsLoading } = useSngs({
     enabled: activeDropdownTab === 'sngs'
+  });
+  const { data: generatorsResponse, isLoading: generatorsLoading } = useGenerators({
+    enabled: activeDropdownTab === 'generators'
   });
 
   // Prevent tab reset by maintaining state consistency
@@ -378,6 +395,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
         case 'sngs':
           await updateSng.mutateAsync({ id, code: newName });
           break;
+        case 'generators':
+          await updateGenerator.mutateAsync({ id, code: newName });
+          break;
         default:
           toast({ 
             variant: "destructive", 
@@ -420,6 +440,9 @@ export function DropdownManager({ config }: DropdownManagerProps) {
           break;
         case 'sngs':
           await deleteSng.mutateAsync(numId);
+          break;
+        case 'generators':
+          await deleteGenerator.mutateAsync(numId);
           break;
         default:
           toast({ 
@@ -488,6 +511,11 @@ export function DropdownManager({ config }: DropdownManagerProps) {
             code: value
           });
           break;
+        case 'generators':
+          await createGenerator.mutateAsync({ 
+            code: value
+          });
+          break;
         default:
           toast({ 
             variant: "destructive", 
@@ -539,12 +567,16 @@ export function DropdownManager({ config }: DropdownManagerProps) {
             disabled={
               (type === 'eventTypes' && createEventType.isPending) ||
               (type === 'venues' && createVenue.isPending) ||
-              (type === 'obs' && createObserver.isPending)
+              (type === 'obs' && createObserver.isPending) ||
+              (type === 'sngs' && createSng.isPending) ||
+              (type === 'generators' && createGenerator.isPending)
             }
           >
             {((type === 'eventTypes' && createEventType.isPending) ||
               (type === 'venues' && createVenue.isPending) ||
-              (type === 'obs' && createObserver.isPending)) ? (
+              (type === 'obs' && createObserver.isPending) ||
+              (type === 'sngs' && createSng.isPending) ||
+              (type === 'generators' && createGenerator.isPending)) ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Plus className="h-4 w-4" />
@@ -679,13 +711,17 @@ export function DropdownManager({ config }: DropdownManagerProps) {
                       disabled={
                         (type === 'eventTypes' && deleteEventType.isPending) ||
                         (type === 'venues' && deleteVenue.isPending) ||
-                        (type === 'obs' && deleteObserver.isPending)
+                        (type === 'obs' && deleteObserver.isPending) ||
+                        (type === 'sngs' && deleteSng.isPending) ||
+                        (type === 'generators' && deleteGenerator.isPending)
                       }
                       title={`Delete ${item.label}`}
                     >
                       {((type === 'eventTypes' && deleteEventType.isPending) ||
                         (type === 'venues' && deleteVenue.isPending) ||
-                        (type === 'obs' && deleteObserver.isPending)) ? (
+                        (type === 'obs' && deleteObserver.isPending) ||
+                        (type === 'sngs' && deleteSng.isPending) ||
+                        (type === 'generators' && deleteGenerator.isPending)) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
@@ -721,11 +757,12 @@ export function DropdownManager({ config }: DropdownManagerProps) {
               }}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="eventTypes">Event Types</TabsTrigger>
           <TabsTrigger value="venues">Venues</TabsTrigger>
           <TabsTrigger value="obs">OB</TabsTrigger>
           <TabsTrigger value="sngs">SNG</TabsTrigger>
+          <TabsTrigger value="generators">Generator</TabsTrigger>
         </TabsList>
         
         <TabsContent value="eventTypes" className="mt-6">
@@ -776,6 +813,23 @@ export function DropdownManager({ config }: DropdownManagerProps) {
               id: sng.id.toString(),
               value: sng.name,
               label: sng.name
+            })) : [])
+          )}
+        </TabsContent>
+
+        <TabsContent value="generators" className="mt-6">
+          {generatorsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-4">
+                <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
+                <p className="text-sm text-muted-foreground">Loading Generators...</p>
+              </div>
+            </div>
+          ) : (
+            renderDropdownSection('generators', 'Generator', generatorsResponse?.success ? generatorsResponse.data.map(generator => ({
+              id: generator.id.toString(),
+              value: generator.name,
+              label: generator.name
             })) : [])
           )}
         </TabsContent>
