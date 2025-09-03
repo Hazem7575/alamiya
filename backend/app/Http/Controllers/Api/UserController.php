@@ -15,7 +15,7 @@ class UserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = User::with('role');
+        $query = User::with('role')->where('id' , '!=' , 1);
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
