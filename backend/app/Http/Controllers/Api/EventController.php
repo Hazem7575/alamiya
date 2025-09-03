@@ -11,6 +11,7 @@ use App\Models\Venue;
 use App\Models\Observer;
 use App\Models\Sng;
 use App\Events\EventUpdated;
+use App\Events\EventDeleted;
 
 use App\Http\Resources\EventResource;
 use App\Traits\LogsActivity;
@@ -509,11 +510,14 @@ class EventController extends Controller
         // Load relationships before deletion to ensure data is available for broadcasting
         $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng']);
         
+        // Convert to array to avoid model serialization issues
+        $eventData = $eventWithRelations->toArray();
+        
         // Activity logging is handled automatically by ModelActivityObserver
         $event->delete();
 
-        // Broadcast deletion event
-        broadcast(new EventUpdated($eventWithRelations, 'deleted'))->toOthers();
+        // Broadcast deletion event using array data (no model serialization)
+        broadcast(new EventDeleted($eventData))->toOthers();
 
         return response()->json([
             'success' => true,
