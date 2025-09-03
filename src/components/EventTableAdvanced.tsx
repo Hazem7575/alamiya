@@ -22,6 +22,16 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
@@ -635,6 +645,7 @@ export function EventTable({
           row={row} 
           onEdit={onEditEvent}
           onOpenEditModal={handleOpenEditModal}
+          onDelete={onDeleteEvents}
           canEdit={canEditEvents()}
           canDelete={canDeleteEvents()}
         />
@@ -644,11 +655,18 @@ export function EventTable({
     }] : []),
   ];
 
+  const [showBulkDeleteAlert, setShowBulkDeleteAlert] = useState(false);
+
   const handleDeleteRows = () => {
+    setShowBulkDeleteAlert(true);
+  };
+
+  const confirmBulkDelete = () => {
     const selectedRows = table.getSelectedRowModel().rows;
     const eventIds = selectedRows.map(row => row.original.id);
     onDeleteEvents?.(eventIds);
     table.resetRowSelection();
+    setShowBulkDeleteAlert(false);
   };
 
   const handleStartEdit = (rowId: string, columnId: string, currentValue: any) => {
@@ -1420,6 +1438,28 @@ export function EventTable({
         onClose={handleCloseEditModal}
         onUpdateEvent={onUpdateEvent}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteAlert} onOpenChange={setShowBulkDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Multiple Events</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {table.getSelectedRowModel().rows.length} selected event(s)? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Events
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1428,45 +1468,80 @@ function RowActions({
   row, 
   onEdit, 
   onOpenEditModal,
+  onDelete,
   canEdit = true,
   canDelete = true
 }: { 
   row: Row<Event>; 
   onEdit?: (event: Event) => void;
   onOpenEditModal?: (event: Event) => void;
+  onDelete?: (eventIds: string[]) => void;
   canEdit?: boolean;
   canDelete?: boolean;
 }) {
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  
+  const handleDelete = () => {
+    onDelete?.([row.original.id]);
+    setShowDeleteAlert(false);
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div className="flex justify-end">
-          <Button size="icon" variant="ghost" className="shadow-none" aria-label="Event actions">
-            <Ellipsis size={16} strokeWidth={2} aria-hidden="true" />
-          </Button>
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {canEdit && (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => onOpenEditModal?.(row.original)}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                <span>Edit</span>
-                <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            {canDelete && <DropdownMenuSeparator />}
-          </>
-        )}
-        {canDelete && (
-          <DropdownMenuItem className="text-destructive focus:text-destructive">
-            <Trash2 className="mr-2 h-4 w-4" />
-            <span>Delete</span>
-            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className="flex justify-end">
+            <Button size="icon" variant="ghost" className="shadow-none" aria-label="Event actions">
+              <Ellipsis size={16} strokeWidth={2} aria-hidden="true" />
+            </Button>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {canEdit && (
+            <>
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => onOpenEditModal?.(row.original)}>
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
+                  <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              {canDelete && <DropdownMenuSeparator />}
+            </>
+          )}
+          {canDelete && (
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive"
+              onClick={() => setShowDeleteAlert(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Delete</span>
+              <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the event "{row.original.event}". 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Event
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
