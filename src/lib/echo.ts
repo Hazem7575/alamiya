@@ -8,12 +8,12 @@ window.Pusher = Pusher;
 const echo = new Echo({
   broadcaster: 'reverb',
   key: 'wtzhaggw2crbkiai2pwj',
-  wsHost: '127.0.0.1',
+  wsHost: 'alamiya.konhub.dev',
   wsPort: 9001,
   wssPort: 9001,
-  forceTLS: false,
+  forceTLS: true,
   enabledTransports: ['ws', 'wss'],
-  cluster: 'mt1',
+  cluster: false,
 });
 
 export default echo;
