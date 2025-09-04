@@ -330,7 +330,7 @@ export function useUpdateEvent() {
         });
       } else if (errorData?.error_type === 'observer_conflict') {
         toast({
-          title: "Observer Conflict", 
+          title: "Ob Conflict",
           description: errorData?.message,
           variant: "destructive",
           duration: 4000,
@@ -699,7 +699,7 @@ export function useUpdateObserver() {
       });
     },
     onError: (error: any) => {
-      let errorMessage = "Failed to update observer";
+      let errorMessage = "Failed to update ob";
       let errorDetails = "";
       
       if (error?.response?.data) {
@@ -718,7 +718,7 @@ export function useUpdateObserver() {
       
       toast({
         variant: "destructive",
-        title: "Unable to Update Observer",
+        title: "Unable to Update Ob",
         description: errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage,
       });
     },

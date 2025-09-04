@@ -242,7 +242,7 @@ export function EventTable({
 
   const [tableSorting, setTableSorting] = useState<SortingState>([
     {
-      id: "date",
+      id: "datetime",
       desc: false,
     },
   ]);
@@ -286,9 +286,11 @@ export function EventTable({
       enableSorting: false,
       enableHiding: false,
     },
+
     {
       header: "Date",
       accessorKey: "date",
+      id: "date", // Explicitly set id for sorting purposes
       cell: ({ row }) => {
         const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "date";
         const currentDate = new Date(row.getValue("date"));
@@ -328,6 +330,7 @@ export function EventTable({
       size: 120,
       enableHiding: false,
       filterFn: dateRangeFilterFn,
+      sortingFn: "datetime", // Use datetime sorting for this column
     },
     {
       header: "Event",
@@ -518,6 +521,7 @@ export function EventTable({
     {
       header: "Time",
       accessorKey: "time",
+      id: "time", // Explicitly set id for sorting purposes
       cell: ({ row }) => {
         const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "time";
         return isEditing ? (
@@ -547,6 +551,7 @@ export function EventTable({
         );
       },
       size: 100,
+      sortingFn: "datetime", // Use datetime sorting for this column
     },
     {
       header: "OB",
@@ -766,6 +771,14 @@ export function EventTable({
     setEditingEvent(null);
   };
 
+  // Set default sorting on mount
+  useEffect(() => {
+    // Set default sort to datetime (date + time) if no sorting is specified
+    if (!sorting?.field && onSort) {
+      onSort('datetime', 'asc');
+    }
+  }, []); // Empty dependency array means this runs only on mount
+
   // Sync local filter state with props from backend
   useEffect(() => {
     if (filters?.observers) {
@@ -971,7 +984,7 @@ export function EventTable({
                 )}
                 value={filters?.search || ""}
                 onChange={(e) => onSearchChange?.(e.target.value)}
-                placeholder="Search events, cities, venues..."
+                placeholder="Search events"
                 type="text"
                 aria-label="Filter events"
               />
@@ -1348,7 +1361,11 @@ export function EventTable({
                           )}
                           onClick={() => {
                             if (header.column.getCanSort()) {
-                              const field = header.column.id;
+                              let field = header.column.id;
+                              // Use datetime sorting for both date and time columns
+                              if (field === 'date' || field === 'time') {
+                                field = 'datetime';
+                              }
                               const currentDirection = sorting?.field === field && sorting?.direction === 'asc' ? 'desc' : 'asc';
                               onSort?.(field, currentDirection);
                             }
@@ -1359,7 +1376,11 @@ export function EventTable({
                               (e.key === "Enter" || e.key === " ")
                             ) {
                               e.preventDefault();
-                              const field = header.column.id;
+                              let field = header.column.id;
+                              // Use datetime sorting for both date and time columns
+                              if (field === 'date' || field === 'time') {
+                                field = 'datetime';
+                              }
                               const currentDirection = sorting?.field === field && sorting?.direction === 'asc' ? 'desc' : 'asc';
                               onSort?.(field, currentDirection);
                             }
@@ -1367,7 +1388,8 @@ export function EventTable({
                           tabIndex={header.column.getCanSort() ? 0 : undefined}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sorting?.field === header.column.id && (
+                          {/* Show sorting indicator for date/time columns when sorted by datetime */}
+                          {((sorting?.field === 'datetime' && (header.column.id === 'date' || header.column.id === 'time')) || sorting?.field === header.column.id) && (
                             sorting.direction === 'asc' ? (
                               <ChevronUp
                                 className="shrink-0 opacity-60"

@@ -209,7 +209,7 @@ const Index = () => {
   };
   
   const [sorting, setSorting] = useState({
-    field: 'date',
+    field: 'datetime',
     direction: 'desc' as 'asc' | 'desc'
   });
 
@@ -383,98 +383,14 @@ const Index = () => {
   
 
 
-  // Convert backend events to frontend format with pagination + Apply filters and sorting
+  // Convert backend events to frontend format - backend already handles filtering and sorting
   const events: Event[] = useMemo(() => {
     if (!eventsResponse?.success || !eventsResponse.data?.data) return [];
     
-
-    let processedEvents = eventsResponse.data.data.map(convertBackendToFrontendEvent);
-    
-
-    // Apply filters
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      processedEvents = processedEvents.filter(event => 
-        event.event.toLowerCase().includes(searchLower) ||
-        event.city.toLowerCase().includes(searchLower) ||
-        event.venue.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (filters.eventTypes.length > 0) {
-      processedEvents = processedEvents.filter(event => 
-        filters.eventTypes.includes(event.eventType)
-      );
-    }
-
-    if (filters.cities.length > 0) {
-      processedEvents = processedEvents.filter(event => 
-        filters.cities.includes(event.city)
-      );
-    }
-
-    if (filters.observers.length > 0) {
-      processedEvents = processedEvents.filter(event => 
-        filters.observers.includes(event.ob)
-      );
-    }
-
-    if (filters.dateRange?.from) {
-      const fromDate = new Date(filters.dateRange.from);
-      const toDate = filters.dateRange.to ? new Date(filters.dateRange.to) : fromDate;
-      
-      processedEvents = processedEvents.filter(event => {
-        try {
-          const eventDate = new Date(event.date);
-          return eventDate >= fromDate && eventDate <= toDate;
-        } catch (error) {
-          console.error('Error parsing event date:', event.date, error);
-          return false;
-        }
-      });
-    }
-
-    // Apply sorting
-    processedEvents.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sorting.field) {
-        case 'date':
-          try {
-            aValue = new Date(a.date);
-            bValue = new Date(b.date);
-          } catch (error) {
-            console.error('Error parsing date for sorting:', error);
-            aValue = new Date(0);
-            bValue = new Date(0);
-          }
-          break;
-        case 'event':
-          aValue = a.event.toLowerCase();
-          bValue = b.event.toLowerCase();
-          break;
-        case 'eventType':
-          aValue = a.eventType.toLowerCase();
-          bValue = b.eventType.toLowerCase();
-          break;
-        case 'city':
-          aValue = a.city.toLowerCase();
-          bValue = b.city.toLowerCase();
-          break;
-        default:
-          aValue = a.date;
-          bValue = b.date;
-      }
-
-      if (sorting.direction === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    return processedEvents;
-  }, [eventsResponse, filters, sorting]);
+    // Simply convert backend events to frontend format
+    // No client-side filtering or sorting needed since backend handles it
+    return eventsResponse.data.data.map(convertBackendToFrontendEvent);
+  }, [eventsResponse]);
 
   // Extract pagination info
   const paginationInfo = useMemo(() => {

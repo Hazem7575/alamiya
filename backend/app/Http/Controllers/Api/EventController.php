@@ -119,6 +119,10 @@ class EventController extends Controller
                 case 'date':
                     $query->orderBy('event_date', $sortDirection)->orderBy('event_time', $sortDirection);
                     break;
+                case 'datetime':
+                    // Sort by date first (priority), then by time
+                    $query->orderBy('event_date', $sortDirection)->orderBy('event_time', $sortDirection);
+                    break;
                 case 'time':
                     $query->orderBy('event_time', $sortDirection);
                     break;
@@ -156,14 +160,14 @@ class EventController extends Controller
                           ->select('events.*');
                     break;
                 default:
-                    $query->orderBy('event_date', 'asc')
-                          ->orderBy('event_time', 'asc');
+                    $query->orderBy('event_date', 'desc')
+                          ->orderBy('event_time', 'desc');
                     break;
             }
         } else {
-            // Default sorting: Date and Time ascending (oldest first)
-            $query->orderBy('event_date', 'asc')
-                  ->orderBy('event_time', 'asc');
+            // Default sorting: Date and Time descending (newest first)
+            $query->orderBy('event_date', 'desc')
+                  ->orderBy('event_time', 'desc');
         }
 
         $events = $query->with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator'])->paginate($perPage);
@@ -672,6 +676,10 @@ class EventController extends Controller
                 case 'date':
                     $query->orderBy('event_date', $sortDirection);
                     break;
+                case 'datetime':
+                    // Sort by date first (priority), then by time
+                    $query->orderBy('event_date', $sortDirection)->orderBy('event_time', $sortDirection);
+                    break;
                 case 'time':
                     $query->orderBy('event_time', $sortDirection);
                     break;
@@ -709,14 +717,14 @@ class EventController extends Controller
                           ->select('events.*');
                     break;
                 default:
-                    $query->orderBy('event_date', 'asc')
-                          ->orderBy('event_time', 'asc');
+                    $query->orderBy('event_date', 'desc')
+                          ->orderBy('event_time', 'desc');
                     break;
             }
         } else {
-            // Default sorting: Date and Time ascending (oldest first)
-            $query->orderBy('event_date', 'asc')
-                  ->orderBy('event_time', 'asc');
+            // Default sorting: Date and Time descending (newest first)
+            $query->orderBy('event_date', 'desc')
+                  ->orderBy('event_time', 'desc');
         }
 
         // Get all events without pagination

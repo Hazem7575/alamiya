@@ -29,20 +29,20 @@ class ObserverController extends Controller
             $validated = $request->validate([
                 'code' => 'required|string|max:255|unique:observers,code',
             ], [
-                'code.required' => 'Observer code is required',
-                'code.string' => 'Observer code must be text',
-                'code.max' => 'Observer code cannot exceed 255 characters',
-                'code.unique' => 'This observer code already exists. Please choose a different code.',
+                'code.required' => 'Ob code is required',
+                'code.string' => 'Ob code must be text',
+                'code.max' => 'Ob code cannot exceed 255 characters',
+                'code.unique' => 'This ob code already exists. Please choose a different code.',
             ]);
 
             $observer = Observer::create($validated);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Observer created successfully',
+                'message' => 'Ob created successfully',
                 'data' => new ObserverResource($observer)
             ], 201);
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -53,7 +53,7 @@ class ObserverController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create observer. Please try again.',
+                'message' => 'Failed to create ob. Please try again.',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -73,10 +73,10 @@ class ObserverController extends Controller
             $validated = $request->validate([
                 'code' => 'required|string|max:255|unique:observers,code,' . $observer->id,
             ], [
-                'code.required' => 'Observer code is required',
-                'code.string' => 'Observer code must be text',
-                'code.max' => 'Observer code cannot exceed 255 characters',
-                'code.unique' => 'This observer code already exists. Please choose a different code.',
+                'code.required' => 'Ob code is required',
+                'code.string' => 'Ob code must be text',
+                'code.max' => 'Ob code cannot exceed 255 characters',
+                'code.unique' => 'This ob code already exists. Please choose a different code.',
             ]);
 
             $observer->update($validated);
@@ -86,7 +86,7 @@ class ObserverController extends Controller
                 'message' => 'Observer updated successfully',
                 'data' => new ObserverResource($observer)
             ]);
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -107,7 +107,7 @@ class ObserverController extends Controller
     {
         try {
             $eventsCount = $observer->events()->count();
-            
+
             if ($eventsCount > 0) {
                 return response()->json([
                     'success' => false,
@@ -123,7 +123,7 @@ class ObserverController extends Controller
                 'success' => true,
                 'message' => "Observer '{$observerCode}' deleted successfully"
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

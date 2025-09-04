@@ -350,7 +350,7 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                 {/* Search */}
                 <div className="relative flex-1 min-w-0">
                   <Input
-                      placeholder="Search events, cities, venues..."
+                      placeholder="Search events"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"

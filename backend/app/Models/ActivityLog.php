@@ -58,7 +58,7 @@ class ActivityLog extends Model
         }
 
         $modelName = class_basename($model);
-        
+
         // Generate detailed descriptions based on model type
         switch ($modelName) {
             case 'Observer':
@@ -90,13 +90,13 @@ class ActivityLog extends Model
     {
         switch ($action) {
             case 'created':
-                return "Created new observer: {$model->code}";
+                return "Created new ob: {$model->code}";
             case 'updated':
-                return "Updated observer: {$model->code}";
+                return "Updated ob: {$model->code}";
             case 'deleted':
-                return "Deleted observer: {$model->code}";
+                return "Deleted ob: {$model->code}";
             default:
-                return "Performed {$action} on observer: {$model->code}";
+                return "Performed {$action} on ob: {$model->code}";
         }
     }
 
@@ -239,7 +239,7 @@ class ActivityLog extends Model
     {
         $modelName = class_basename($model);
         $itemName = $model->name ?? $model->title ?? $model->email ?? "ID: {$model->id}";
-        
+
         switch ($action) {
             case 'created':
                 return "Created new {$modelName}: {$itemName}";

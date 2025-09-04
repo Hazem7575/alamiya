@@ -47,6 +47,7 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [popupOpen, setPopupOpen] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,6 +104,16 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
     const dateStr = date.toISOString().split('T')[0];
     const dayEvents = filteredEvents.filter(event => event.date === dateStr);
     return dayEvents;
+  };
+
+  const toggleDayExpansion = (dateStr: string) => {
+    const newExpandedDays = new Set(expandedDays);
+    if (newExpandedDays.has(dateStr)) {
+      newExpandedDays.delete(dateStr);
+    } else {
+      newExpandedDays.add(dateStr);
+    }
+    setExpandedDays(newExpandedDays);
   };
 
   const formatWeekRange = () => {
@@ -210,7 +221,7 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
             {/* Search */}
             <div className="relative flex-1 min-w-0">
               <Input
-                placeholder="Search events, cities, venues..."
+                placeholder="Search events"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -419,8 +430,14 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
         <div className="grid grid-cols-7 min-h-[300px] md:min-h-[400px] lg:min-h-[500px]">
           {weekDays.map((day, index) => {
             const dayEvents = getEventsForDate(day);
+            const dayStr = day.toISOString().split('T')[0];
+            const isExpanded = expandedDays.has(dayStr);
             const isToday = new Date().toDateString() === day.toDateString();
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            
+            // Show first 5 events or all events if expanded
+            const eventsToShow = isExpanded ? dayEvents : dayEvents.slice(0, 5);
+            const hasMoreEvents = dayEvents.length > 5;
 
             return (
               <div
@@ -434,29 +451,26 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
                 } transition-all duration-200`}
               >
                 <div className="space-y-1 md:space-y-2">
-                  {dayEvents.slice(0, 3).map((event) => {
+                  {eventsToShow.map((event) => {
                     const eventColors = getEventTypeColor(event.eventType, eventTypes);
                     return (
                       <div
                         key={event.id}
-                        className={`text-xs p-0 md:p-1 rounded-lg ${eventColors.bg} border ${eventColors.border} shadow-sm cursor-pointer hover:shadow-md hover:border-opacity-80 transition-all duration-200 group`}
+                        className={`text-xs p-1 md:p-2 rounded-lg ${eventColors.bg} border ${eventColors.border} shadow-sm cursor-pointer hover:shadow-md hover:border-opacity-80 transition-all duration-200 group`}
                         onClick={() => {
                           setSelectedEvent(event);
                           setPopupOpen(true);
                         }}
                       >
-
                         <div className={`text-xs font-semibold ${eventColors.text} mb-1 truncate leading-tight text-left`}>
                           {event.event}
                         </div>
                         <div className="text-xs text-gray-600 truncate leading-tight text-left">
                           {event.city} {event.time}
                         </div>
-
                         <div className="text-xs text-gray-500 mt-1 truncate leading-tight text-left">
                           {event.ob} • {event.sng}
                         </div>
-
                       </div>
                     );
                   })}
@@ -467,10 +481,16 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
                     </div>
                   )}
                   
-                  {dayEvents.length > 3 && (
-                    <div className="text-xs text-gray-500 bg-gray-100 rounded px-1 py-0.5 text-center">
-                      +{dayEvents.length - 3} more
-                    </div>
+                  {hasMoreEvents && (
+                    <button
+                      onClick={() => toggleDayExpansion(dayStr)}
+                      className="text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 text-center w-full transition-colors duration-200 cursor-pointer"
+                    >
+                      {isExpanded ? 
+                        `Show less` : 
+                        `+${dayEvents.length - 5} more`
+                      }
+                    </button>
                   )}
                 </div>
               </div>

@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Building2, User, Clock, X, Video } from 'lucide-react';
+import { Calendar, MapPin, Building2, User, Clock, X, Video, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { Event } from '@/types';
 import { getEventTypeBadgeVariant } from '@/lib/utils';
@@ -105,6 +105,12 @@ export function EventPopup({ event, open, onOpenChange, eventTypes = [] }: Event
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <Video className="h-4 w-4" />
                     <span>SNG: {event.sng}</span>
+                  </div>
+              )}
+              {event.generator && (
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <Zap className="h-4 w-4" />
+                    <span>Generator: {event.generator}</span>
                   </div>
               )}
 
