@@ -17,6 +17,7 @@ const getEventTypeColor = (eventType: string, eventTypes: any[]) => {
   const eventTypeData = eventTypes.find(t => t.name === eventType);
   const colorVariant = getEventTypeBadgeVariant(eventType, eventTypeData);
 
+
   // Map color variants to actual CSS colors
   const colorMap: { [key: string]: { bg: string; border: string; text: string } } = {
     light_blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
@@ -118,15 +119,25 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
   const filteredEventTypes = uniqueEventTypes.filter(type =>
       type.toLowerCase().includes(eventTypeSearchTerm.toLowerCase())
   );
-  const filteredObs = uniqueObs.filter(ob =>
-      ob.toLowerCase().includes(obSearchTerm.toLowerCase())
-  );
+  const filteredObs = uniqueObs
+      .filter(ob => ob.toLowerCase().includes(obSearchTerm.toLowerCase()))
+      .sort((a, b) => {
+        // استخراج الرقم من النص
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
   const filteredCities = uniqueCities.filter(city =>
       city.toLowerCase().includes(citySearchTerm.toLowerCase())
   );
-  const filteredSngs = uniqueSngs.filter(sng =>
-      sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
-  );
+  const filteredSngs = uniqueSngs
+      .filter(sng => sng.toLowerCase().includes(sngSearchTerm.toLowerCase()))
+      .sort((a, b) => {
+        // استخراج الرقم من النص
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
 
   const handleEventTypeChange = (eventType: string, checked: boolean) => {
     if (checked) {
@@ -203,7 +214,7 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
             key={day}
             className={`p-0.5 md:p-1 ${isDayExpanded ? 'min-h-auto' : 'min-h-[60px] md:min-h-[100px]'} border-r border-b border-gray-200 relative ${
                 isToday
-                    ? 'bg-blue-50 border-blue-300'
+                    ? ''
                     : isWeekend
                         ? 'bg-gray-50/50'
                         : 'bg-white hover:bg-gray-50'
@@ -216,7 +227,17 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                   : isWeekend
                       ? 'text-gray-500'
                       : 'text-gray-700'
-          }`}>
+          }`} style={isToday ?{
+            width: '25px',
+            height: '25px',
+            background: 'rgb(219 234 254)',
+            color: '#2563ea',
+            textAlign: 'center',
+            borderRadius: '50%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          } : {} }>
             {day}
           </div>
 

@@ -15,7 +15,7 @@ import { getEventTypeBadgeVariant } from '@/lib/utils';
 const getEventTypeColor = (eventType: string, eventTypes: any[]) => {
   const eventTypeData = eventTypes.find(t => t.name === eventType);
   const colorVariant = getEventTypeBadgeVariant(eventType, eventTypeData);
-  
+
   // Map color variants to actual CSS colors
   const colorMap: { [key: string]: { bg: string; border: string; text: string } } = {
     light_blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
@@ -34,7 +34,6 @@ const getEventTypeColor = (eventType: string, eventTypes: any[]) => {
     light_amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
     light_slate: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' }
   };
-  
   return colorMap[colorVariant] || colorMap.light_blue;
 };
 
@@ -132,15 +131,26 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
   const filteredEventTypes = uniqueEventTypes.filter(type => 
     type.toLowerCase().includes(eventTypeSearchTerm.toLowerCase())
   );
-  const filteredObs = uniqueObs.filter(ob => 
-    ob.toLowerCase().includes(obSearchTerm.toLowerCase())
-  );
+  const filteredObs = uniqueObs
+      .filter(ob => ob.toLowerCase().includes(obSearchTerm.toLowerCase()))
+      .sort((a, b) => {
+        // استخراج الرقم من النص
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
   const filteredCities = uniqueCities.filter(city => 
     city.toLowerCase().includes(citySearchTerm.toLowerCase())
   );
-  const filteredSngs = uniqueSngs.filter(sng => 
-    sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
-  );
+  const filteredSngs = uniqueSngs
+      .filter(sng => sng.toLowerCase().includes(sngSearchTerm.toLowerCase()))
+      .sort((a, b) => {
+        // استخراج الرقم من النص
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
+
 
   const handleEventTypeChange = (eventType: string, checked: boolean) => {
     if (checked) {
@@ -505,6 +515,7 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
         event={selectedEvent}
         open={popupOpen}
         onOpenChange={setPopupOpen}
+        eventTypes={eventTypes}
       />
     </div>
   );

@@ -210,7 +210,7 @@ const Index = () => {
   
   const [sorting, setSorting] = useState({
     field: 'datetime',
-    direction: 'desc' as 'asc' | 'desc'
+    direction: 'asc' as 'asc' | 'desc'
   });
 
   // Fetch data from backend

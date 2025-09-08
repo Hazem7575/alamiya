@@ -723,8 +723,8 @@ class EventController extends Controller
             }
         } else {
             // Default sorting: Date and Time descending (newest first)
-            $query->orderBy('event_date', 'desc')
-                  ->orderBy('event_time', 'desc');
+            $query->orderBy('event_date', 'asc')
+                  ->orderBy('event_time', 'asc');
         }
 
         // Get all events without pagination
@@ -748,8 +748,8 @@ class EventController extends Controller
             ->where('status', 'scheduled') // Only scheduled events for guests
             ->whereMonth('event_date', $month)
             ->whereYear('event_date', $year)
-            ->orderBy('event_date')
-            ->orderBy('event_time')
+            ->orderBy('event_date'  , 'asc')
+            ->orderBy('event_time', 'asc')
             ->get();
 
         $calendarData = [];

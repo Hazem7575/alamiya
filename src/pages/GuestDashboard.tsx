@@ -32,7 +32,6 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     return dateStr;
   };
 
-  console.log(backendEvent)
   return {
     id: backendEvent.id.toString(),
     date: formatDate(backendEvent.event_date),
@@ -50,7 +49,7 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
 };
 
 const GuestDashboard = () => {
-  const [currentView, setCurrentView] = useState<ViewMode>('table');
+  const [currentView, setCurrentView] = useState<ViewMode>('monthly');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -230,7 +229,7 @@ const GuestDashboard = () => {
           <div className="flex items-center justify-center w-16 h-16  mr-4">
             <img src="/alamiya-logo.png" alt=""/>
           </div>
-          <div className="text-center">
+          <div className="text-left">
             <h1 className="text-4xl font-bold text-foreground !text-[30px]">Alamiya Calendar</h1>
             <p className="text-xl text-muted-foreground !text-[15px]">Discover Alamiya's Latest Projects Step by Step</p>
           </div>

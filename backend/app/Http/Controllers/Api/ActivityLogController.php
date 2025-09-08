@@ -16,9 +16,8 @@ class ActivityLogController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $query = ActivityLog::with(['user'])
-                ->where('user_id', $user->id)
                 ->orderBy('created_at', 'desc');
 
             // Apply filters if provided
@@ -90,7 +89,7 @@ class ActivityLogController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Check if user has permission to view all activities
             if (!$user->hasPermission('activity_logs.view_all')) {
                 return response()->json([
@@ -175,7 +174,7 @@ class ActivityLogController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $query = ActivityLog::where('user_id', $user->id);
 
             // Apply date filter if provided
