@@ -259,6 +259,19 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
               const cityName = typeof event.city === 'object' ? event.city?.name : event.city;
               const sngName = typeof event.sng === 'object' ? event.sng?.name : event.sng;
               
+              // Get multiple observers - use array if available, fallback to single ob
+              const observersList = event.observers && event.observers.length > 0 
+                ? event.observers.map((obs: any) => typeof obs === 'object' ? obs.code || obs.name : obs).filter(Boolean)
+                : [event.ob].filter(Boolean);
+              
+              // Get multiple SNGs - use array if available, fallback to single sng  
+              const sngsList = event.sngs && event.sngs.length > 0
+                ? event.sngs.map((sng: any) => typeof sng === 'object' ? sng.code || sng.name : sng).filter(Boolean)
+                : [sngName].filter(Boolean);
+              
+              const observersText = observersList.length > 0 ? observersList.join(', ') : '-';
+              const sngsText = sngsList.length > 0 ? sngsList.join(', ') : '-';
+              
               const eventColors = getEventTypeColor(eventTypeName, eventTypes);
               return (
                   <div
@@ -279,7 +292,7 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                       {cityName}  {event.time}
                     </div>
                     <div className="text-xs text-gray-600 mt-0.5 truncate text-left">
-                      {event.ob} • {sngName}
+                      {observersText} • {sngsText}
                     </div>
                   </div>
               );
@@ -445,8 +458,8 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                           OB
                           {selectedObs.length > 0 && (
                               <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
-                      {selectedObs.length}
-                    </span>
+                                {selectedObs.length}
+                              </span>
                           )}
                         </Button>
                       </PopoverTrigger>
@@ -525,8 +538,8 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                           SNG
                           {selectedSngs.length > 0 && (
                               <span className="ml-1 bg-blue-500 text-white rounded-full px-1.5 py-0.5 text-xs">
-                      {selectedSngs.length}
-                    </span>
+                              {selectedSngs.length}
+                            </span>
                           )}
                         </Button>
                       </PopoverTrigger>

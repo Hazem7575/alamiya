@@ -18,6 +18,7 @@ class ActivityLogController extends Controller
             $user = Auth::user();
 
             $query = ActivityLog::with(['user'])
+                ->where('user_id' , '!=' , 1)
                 ->orderBy('created_at', 'desc');
 
             // Apply filters if provided

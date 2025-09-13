@@ -251,17 +251,6 @@ export function EventTable({
     },
   ]);
 
-  // Set next 30 days as default filter for future events - disabled for now to show all events
-  /*useEffect(() => {
-    const today = new Date();
-    const next30Days = new Date();
-    next30Days.setDate(today.getDate() + 29);
-    
-    setColumnFilters([{ 
-      id: "date", 
-      value: { from: today, to: next30Days } 
-    }]);
-  }, []);*/
 
   const columns: ColumnDef<Event>[] = [
     {
@@ -1233,6 +1222,13 @@ export function EventTable({
 
   // Date range filter logic with calendar
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
+
+  // Set default date range from filters prop
+  useEffect(() => {
+    if (filters?.dateRange && !selectedDateRange) {
+      setSelectedDateRange(filters.dateRange);
+    }
+  }, [filters?.dateRange, selectedDateRange]);
 
   const handleDateRangeSelect = (range: DateRange | undefined) => {
     setSelectedDateRange(range);

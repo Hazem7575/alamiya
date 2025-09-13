@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Event, ViewMode } from '@/types';
 import { EventTable } from '@/components/EventTableAdvanced';
 import { MonthlyCalendar } from '@/components/Calendar/MonthlyCalendar';
@@ -219,6 +219,21 @@ const Index = () => {
     generators: [] as string[],
     dateRange: null as any
   });
+
+  // Set next 30 days as default filter on component mount
+  useEffect(() => {
+    const today = new Date();
+    const next30Days = new Date();
+    next30Days.setDate(today.getDate() + 30);
+    
+    setFilters(prev => ({
+      ...prev,
+      dateRange: {
+        from: today,
+        to: next30Days
+      }
+    }));
+  }, []);
   
   // Separate state for search input (before debounce)
   const [searchInput, setSearchInput] = useState('');

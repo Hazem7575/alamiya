@@ -477,6 +477,19 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
                     const cityName = typeof event.city === 'object' ? event.city?.name : event.city;
                     const sngName = typeof event.sng === 'object' ? event.sng?.name : event.sng;
                     
+                    // Get multiple observers - use array if available, fallback to single ob
+                    const observersList = event.observers && event.observers.length > 0 
+                      ? event.observers.map((obs: any) => typeof obs === 'object' ? obs.code || obs.name : obs).filter(Boolean)
+                      : [event.ob].filter(Boolean);
+                    
+                    // Get multiple SNGs - use array if available, fallback to single sng  
+                    const sngsList = event.sngs && event.sngs.length > 0
+                      ? event.sngs.map((sng: any) => typeof sng === 'object' ? sng.code || sng.name : sng).filter(Boolean)
+                      : [sngName].filter(Boolean);
+                    
+                    const observersText = observersList.length > 0 ? observersList.join(', ') : '-';
+                    const sngsText = sngsList.length > 0 ? sngsList.join(', ') : '-';
+                    
                     const eventColors = getEventTypeColor(eventTypeName, eventTypes);
                     return (
                       <div
@@ -494,7 +507,7 @@ export function WeeklyCalendar({ events, eventTypes = [] }: WeeklyCalendarProps)
                           {cityName} {event.time}
                         </div>
                         <div className="text-xs text-gray-500 mt-1 truncate leading-tight text-left">
-                          {event.ob} • {sngName}
+                          {observersText} • {sngsText}
                         </div>
                       </div>
                     );
