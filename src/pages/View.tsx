@@ -32,10 +32,14 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     date: formatDate(backendEvent.event_date),
     time: backendEvent.event_time,
     event: backendEvent.title,
-    eventType: backendEvent.event_type?.name || '-',
-    city: backendEvent.city?.name || '-',
-    venue: backendEvent.venue?.name || '-',
+    eventType: backendEvent.eventType || backendEvent.event_type || { name: backendEvent.eventType?.name || backendEvent.event_type?.name || '-' },
+    city: backendEvent.city || { name: backendEvent.city?.name || '-' },
+    venue: backendEvent.venue || { name: backendEvent.venue?.name || '-' },
     ob: backendEvent.observer?.code || '-',
+    // Include arrays for editing support
+    observers: backendEvent.observers || (backendEvent.observer ? [backendEvent.observer] : []),
+    // Include single objects for backward compatibility
+    observer: backendEvent.observer,
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };

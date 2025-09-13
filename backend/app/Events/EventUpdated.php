@@ -21,7 +21,7 @@ class EventUpdated implements ShouldBroadcast
      */
     public function __construct(EventModel $event, string $action = 'updated')
     {
-        $this->event = $event->load(['eventType', 'city', 'venue', 'observer', 'sng']);
+        $this->event = $event->load(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators']);
         $this->action = $action;
     }
 

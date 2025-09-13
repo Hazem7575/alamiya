@@ -37,12 +37,27 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     date: formatDate(backendEvent.event_date),
     time: backendEvent.event_time,
     event: backendEvent.title,
-    eventType: backendEvent.event_type?.name || '-',
-    city: backendEvent.city?.name || '-',
-    venue: backendEvent.venue?.name || '-',
-    ob: backendEvent.observer?.code || '-',
-    sng: backendEvent.sng?.code || '-',
-    generator: backendEvent.generator?.code || '-',
+    eventType: backendEvent.eventType || backendEvent.event_type || { name: backendEvent.eventType?.name || backendEvent.event_type?.name || '-' },
+    city: backendEvent.city || { name: backendEvent.city?.name || '-' },
+    venue: backendEvent.venue || { name: backendEvent.venue?.name || '-' },
+    // Handle observers - use first observer for backward compatibility
+    ob: backendEvent.observers && backendEvent.observers.length > 0 
+      ? backendEvent.observers[0].code 
+      : backendEvent.observer?.code || '-',
+    // Handle SNGs - use first SNG for backward compatibility
+    sng: backendEvent.sngs && backendEvent.sngs.length > 0 
+      ? (backendEvent.sngs[0].code || backendEvent.sngs[0].name)
+      : (backendEvent.sng?.code || backendEvent.sng?.name || '-'),
+    // Handle generators - use first generator for backward compatibility
+    generator: backendEvent.generators && backendEvent.generators.length > 0 
+      ? (backendEvent.generators[0].code || backendEvent.generators[0].name)
+      : (backendEvent.generator?.code || backendEvent.generator?.name || '-'),
+    // Include arrays for editing support
+    observers: backendEvent.observers || (backendEvent.observer ? [backendEvent.observer] : []),
+    sngs: backendEvent.sngs || (backendEvent.sng ? [backendEvent.sng] : []),
+    generators: backendEvent.generators || (backendEvent.generator ? [backendEvent.generator] : []),
+    // Include single objects for backward compatibility
+    observer: backendEvent.observer,
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };

@@ -38,13 +38,20 @@ const getHeaderBackgroundColor = (eventType: string, eventTypes: any[] = []) => 
     light_slate: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' }
   };
 
-  return colorMap[colorVariant] || 'bg-slate-600';
+  return colorMap[colorVariant] || { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' };
 };
 
 export function EventPopup({ event, open, onOpenChange, eventTypes = [] }: EventPopupProps) {
   if (!event) return null;
 
-  const headerBgColor = getHeaderBackgroundColor(event.eventType, eventTypes);
+  // Extract string values from objects
+  const eventTypeName = typeof event.eventType === 'object' ? event.eventType?.name : event.eventType;
+  const cityName = typeof event.city === 'object' ? event.city?.name : event.city;
+  const venueName = typeof event.venue === 'object' ? event.venue?.name : event.venue;
+  const sngName = typeof event.sng === 'object' ? event.sng?.name : event.sng;
+  const generatorName = typeof event.generator === 'object' ? event.generator?.name : event.generator;
+
+  const headerBgColor = getHeaderBackgroundColor(eventTypeName, eventTypes);
 
   return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,10 +64,10 @@ export function EventPopup({ event, open, onOpenChange, eventTypes = [] }: Event
                     <Calendar className="h-5 w-5" />
                   </div>
                   <Badge
-                      variant={getEventTypeBadgeVariant(event.eventType, eventTypes.find(t => t.name === event.eventType))}
+                      variant={getEventTypeBadgeVariant(eventTypeName, eventTypes.find(t => t.name === eventTypeName))}
                       className={`bg-white/20 ${headerBgColor.text} ${headerBgColor.border}`}
                   >
-                    {event.eventType}
+                    {eventTypeName}
                   </Badge>
                 </div>
               </div>
@@ -88,29 +95,77 @@ export function EventPopup({ event, open, onOpenChange, eventTypes = [] }: Event
 
               <div className="flex items-center gap-3 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>{event.city}</span>
+                <span>{cityName}</span>
               </div>
 
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Building2 className="h-4 w-4" />
-                <span>{event.venue}</span>
+                <span>{venueName}</span>
               </div>
 
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>OB: {event.ob}</span>
+              <div className="flex items-start gap-3 text-muted-foreground">
+                <User className="h-4 w-4 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-sm">Ob:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {event.observers && event.observers.length > 0 ? (
+                      event.observers.map((observer: any, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {typeof observer === 'object' ? observer.code || observer.name || '-' : observer}
+                        </Badge>
+                      ))
+                    ) : event.ob ? (
+                      <Badge variant="outline" className="text-xs">
+                        {event.ob}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">No ob</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {event.sng && (
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <Video className="h-4 w-4" />
-                    <span>SNG: {event.sng}</span>
+              {((event.sngs && event.sngs.length > 0) || sngName) && (
+                  <div className="flex items-start gap-3 text-muted-foreground">
+                    <Video className="h-4 w-4 mt-0.5" />
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-sm">SNGs:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {event.sngs && event.sngs.length > 0 ? (
+                          event.sngs.map((sng: any, index: number) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {typeof sng === 'object' ? sng.code || sng.name || '-' : sng}
+                            </Badge>
+                          ))
+                        ) : sngName ? (
+                          <Badge variant="outline" className="text-xs">
+                            {sngName}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
               )}
-              {event.generator && (
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <Zap className="h-4 w-4" />
-                    <span>Generator: {event.generator}</span>
+
+              {((event.generators && event.generators.length > 0) || generatorName) && (
+                  <div className="flex items-start gap-3 text-muted-foreground">
+                    <Zap className="h-4 w-4 mt-0.5" />
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-sm">Generators:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {event.generators && event.generators.length > 0 ? (
+                          event.generators.map((generator: any, index: number) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {typeof generator === 'object' ? generator.code || generator.name || '-' : generator}
+                            </Badge>
+                          ))
+                        ) : generatorName ? (
+                          <Badge variant="outline" className="text-xs">
+                            {generatorName}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
               )}
 

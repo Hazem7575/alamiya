@@ -90,27 +90,66 @@ const eventTitleFilterFn: FilterFn<Event> = (row, columnId, filterValue) => {
 
 const eventTypeFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
-  return filterValue.includes(row.getValue(columnId) as string);
+  const eventTypeValue = row.getValue(columnId);
+  const eventTypeName = typeof eventTypeValue === 'object' ? (eventTypeValue as any)?.name : eventTypeValue;
+  return filterValue.includes(eventTypeName as string);
 };
 
 const obFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
+  const event = row.original;
+  
+  // Check observers array if available
+  if (event.observers && event.observers.length > 0) {
+    return event.observers.some((observer: any) => {
+      const observerCode = typeof observer === 'object' ? observer.code || (observer as any).name : observer;
+      return filterValue.includes(observerCode);
+    });
+  }
+  
+  // Fallback to single ob
   return filterValue.includes(row.getValue(columnId) as string);
 };
 
 const cityFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
-  return filterValue.includes(row.getValue(columnId) as string);
+  const cityValue = row.getValue(columnId);
+  const cityName = typeof cityValue === 'object' ? (cityValue as any)?.name : cityValue;
+  return filterValue.includes(cityName as string);
 };
 
 const sngFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
-  return filterValue.includes(row.getValue(columnId) as string);
+  const event = row.original;
+  
+  // Check sngs array if available
+  if (event.sngs && event.sngs.length > 0) {
+    return event.sngs.some((sng: any) => {
+      const sngCode = typeof sng === 'object' ? sng.code || sng.name : sng;
+      return filterValue.includes(sngCode);
+    });
+  }
+  
+  // Fallback to single sng
+  const sngValue = row.getValue(columnId) as string;
+  return filterValue.includes(sngValue);
 };
 
 const generatorFilterFn: FilterFn<Event> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
-  return filterValue.includes(row.getValue(columnId) as string);
+  const event = row.original;
+  
+  // Check generators array if available
+  if (event.generators && event.generators.length > 0) {
+    return event.generators.some((generator: any) => {
+      const generatorCode = typeof generator === 'object' ? generator.code || generator.name : generator;
+      return filterValue.includes(generatorCode);
+    });
+  }
+  
+  // Fallback to single generator
+  const generatorValue = row.getValue(columnId) as string;
+  return filterValue.includes(generatorValue);
 };
 
 const dateRangeFilterFn: FilterFn<Event> = (row, columnId, filterValue: DateRange | undefined) => {
@@ -237,13 +276,14 @@ export function EventTableGuest({
       },
       accessorKey: "eventType",
       cell: ({ row }) => {
-        const eventTypeValue = row.getValue("eventType") as string;
-        const eventTypeData = eventTypes.find(et => et.name === eventTypeValue);
-        const variant = getEventTypeBadgeVariant(eventTypeValue, eventTypeData);
+        const eventTypeValue = row.getValue("eventType");
+        const eventTypeName = typeof eventTypeValue === 'object' ? (eventTypeValue as any)?.name : eventTypeValue;
+        const eventTypeData = eventTypes.find(et => et.name === eventTypeName);
+        const variant = getEventTypeBadgeVariant(eventTypeName, eventTypeData);
 
         return (
             <Badge variant={variant}>
-              {eventTypeValue}
+              {eventTypeName || '-'}
             </Badge>
         );
       },
@@ -263,11 +303,15 @@ export function EventTableGuest({
         );
       },
       accessorKey: "city",
-      cell: ({ row }) => (
+      cell: ({ row }) => {
+        const cityValue = row.getValue("city");
+        const cityName = typeof cityValue === 'object' ? (cityValue as any)?.name : cityValue;
+        return (
           <div className="text-sm">
-            {row.getValue("city")}
+            {cityName || '-'}
           </div>
-      ),
+        );
+      },
       size: 150,
     },
     {
@@ -283,11 +327,15 @@ export function EventTableGuest({
         );
       },
       accessorKey: "venue",
-      cell: ({ row }) => (
-          <div className="text-sm max-w-[150px] truncate" title={row.getValue("venue")}>
-            {row.getValue("venue")}
+      cell: ({ row }) => {
+        const venueValue = row.getValue("venue");
+        const venueName = typeof venueValue === 'object' ? (venueValue as any)?.name : venueValue;
+        return (
+          <div className="text-sm max-w-[150px] truncate" title={venueName}>
+            {venueName || '-'}
           </div>
-      ),
+        );
+      },
       size: 150,
     },
     {
@@ -329,11 +377,62 @@ export function EventTableGuest({
         );
       },
       accessorKey: "ob",
-      cell: ({ row }) => (
-          <div className="text-sm">
-            {row.getValue("ob")}
+      cell: ({ row }) => {
+        const event = row.original;
+        // Use observers array if available, fallback to single ob
+        const currentObservers = event.observers && event.observers.length > 0 ? event.observers : [event.ob].filter(Boolean);
+        
+        if (currentObservers.length === 0) {
+          return <div className="text-sm text-muted-foreground">-</div>;
+        }
+        
+        if (currentObservers.length === 1) {
+          const observer = currentObservers[0];
+          const observerCode = typeof observer === 'object' ? observer.code || (observer as any).name || '-' : observer;
+          return (
+            <div className="text-sm">
+              <Badge variant="outline" className="text-xs truncate">
+                {observerCode}
+              </Badge>
+            </div>
+          );
+        }
+        
+        // Multiple observers - show first 2 and +N more
+        return (
+          <div className="flex flex-wrap gap-1">
+            {currentObservers.slice(0, 2).map((observer: any, index: number) => {
+              const observerCode = typeof observer === 'object' ? observer.code || (observer as any).name || '-' : observer;
+              return (
+                <Badge key={index} variant="outline" className="text-xs truncate">
+                  {observerCode}
+                </Badge>
+              );
+            })}
+            {currentObservers.length > 2 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="inline-flex items-center justify-center rounded-md border border-input bg-background px-2 py-1 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    +{currentObservers.length - 2} more
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2" align="start">
+                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    {currentObservers.map((observer: any, index: number) => {
+                      const observerCode = typeof observer === 'object' ? observer.code || (observer as any).name || '-' : observer;
+                      return (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {observerCode}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-      ),
+        );
+      },
       size: 100,
     },
     {
@@ -349,11 +448,62 @@ export function EventTableGuest({
         );
       },
       accessorKey: "sng",
-      cell: ({ row }) => (
-          <div className="text-sm">
-            {row.getValue("sng")}
+      cell: ({ row }) => {
+        const event = row.original;
+        // Use sngs array if available, fallback to single sng
+        const currentSngs = event.sngs && event.sngs.length > 0 ? event.sngs : [event.sng].filter(Boolean);
+        
+        if (currentSngs.length === 0) {
+          return <div className="text-sm text-muted-foreground">-</div>;
+        }
+        
+        if (currentSngs.length === 1) {
+          const sng = currentSngs[0];
+          const sngCode = typeof sng === 'object' ? sng.code || sng.name || '-' : sng;
+          return (
+            <div className="text-sm">
+              <Badge variant="outline" className="text-xs truncate">
+                {sngCode}
+              </Badge>
+            </div>
+          );
+        }
+        
+        // Multiple SNGs - show first 2 and +N more
+        return (
+          <div className="flex flex-wrap gap-1">
+            {currentSngs.slice(0, 2).map((sng: any, index: number) => {
+              const sngCode = typeof sng === 'object' ? sng.code || sng.name || '-' : sng;
+              return (
+                <Badge key={index} variant="outline" className="text-xs truncate">
+                  {sngCode}
+                </Badge>
+              );
+            })}
+            {currentSngs.length > 2 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="inline-flex items-center justify-center rounded-md border border-input bg-background px-2 py-1 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    +{currentSngs.length - 2} more
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2" align="start">
+                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    {currentSngs.map((sng: any, index: number) => {
+                      const sngCode = typeof sng === 'object' ? sng.code || sng.name || '-' : sng;
+                      return (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {sngCode}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-      ),
+        );
+      },
       size: 100,
       filterFn: sngFilterFn,
     },
@@ -370,11 +520,62 @@ export function EventTableGuest({
         );
       },
       accessorKey: "generator",
-      cell: ({ row }) => (
-          <div className="text-sm">
-            {row.getValue("generator")}
+      cell: ({ row }) => {
+        const event = row.original;
+        // Use generators array if available, fallback to single generator
+        const currentGenerators = event.generators && event.generators.length > 0 ? event.generators : [event.generator].filter(Boolean);
+        
+        if (currentGenerators.length === 0) {
+          return <div className="text-sm text-muted-foreground">-</div>;
+        }
+        
+        if (currentGenerators.length === 1) {
+          const generator = currentGenerators[0];
+          const generatorCode = typeof generator === 'object' ? generator.code || generator.name || '-' : generator;
+          return (
+            <div className="text-sm">
+              <Badge variant="outline" className="text-xs truncate">
+                {generatorCode}
+              </Badge>
+            </div>
+          );
+        }
+        
+        // Multiple Generators - show first 1 and +N more (generators usually fewer)
+        return (
+          <div className="flex flex-wrap gap-1">
+            {currentGenerators.slice(0, 1).map((generator: any, index: number) => {
+              const generatorCode = typeof generator === 'object' ? generator.code || generator.name || '-' : generator;
+              return (
+                <Badge key={index} variant="outline" className="text-xs truncate">
+                  {generatorCode}
+                </Badge>
+              );
+            })}
+            {currentGenerators.length > 1 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="inline-flex items-center justify-center rounded-md border border-input bg-background px-2 py-1 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    +{currentGenerators.length - 1} more
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2" align="start">
+                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    {currentGenerators.map((generator: any, index: number) => {
+                      const generatorCode = typeof generator === 'object' ? generator.code || generator.name || '-' : generator;
+                      return (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {generatorCode}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-      ),
+        );
+      },
       size: 100,
       filterFn: generatorFilterFn,
     },
@@ -437,23 +638,70 @@ export function EventTableGuest({
 
   // Get unique values for filters from loaded events
   const uniqueObs = useMemo(() => {
-    const obs = events.map(event => event.ob).filter(Boolean);
+    const obs: string[] = [];
+    events.forEach(event => {
+      // Include observers from array
+      if (event.observers && event.observers.length > 0) {
+        event.observers.forEach((observer: any) => {
+          const observerCode = typeof observer === 'object' ? observer.code || (observer as any).name : observer;
+          if (observerCode) obs.push(observerCode);
+        });
+      } else if (event.ob) {
+        // Fallback to single ob
+        obs.push(event.ob);
+      }
+    });
     return Array.from(new Set(obs)).sort();
   }, [events]);
 
   const uniqueCities = useMemo(() => {
-    const cities = events.map(event => event.city).filter(Boolean);
+    const cities = events.map(event => 
+      typeof event.city === 'object' ? (event.city as any)?.name : event.city
+    ).filter(Boolean) as string[];
     return Array.from(new Set(cities)).sort();
   }, [events]);
 
   const uniqueEventTypes = useMemo(() => {
-    const types = events.map(event => event.eventType).filter(Boolean);
+    const types = events.map(event => 
+      typeof event.eventType === 'object' ? (event.eventType as any)?.name : event.eventType
+    ).filter(Boolean) as string[];
     return Array.from(new Set(types)).sort();
   }, [events]);
 
   const uniqueSngs = useMemo(() => {
-    const sngs = events.map(event => event.sng).filter(Boolean);
+    const sngs: string[] = [];
+    events.forEach(event => {
+      // Include SNGs from array
+      if (event.sngs && event.sngs.length > 0) {
+        event.sngs.forEach((sng: any) => {
+          const sngCode = typeof sng === 'object' ? sng.code || sng.name : sng;
+          if (sngCode) sngs.push(sngCode);
+        });
+      } else if (event.sng) {
+        // Fallback to single sng
+        const sngCode = typeof event.sng === 'object' ? (event.sng as any)?.name || (event.sng as any)?.code : event.sng;
+        if (sngCode) sngs.push(sngCode);
+      }
+    });
     return Array.from(new Set(sngs)).sort();
+  }, [events]);
+
+  const uniqueGenerators = useMemo(() => {
+    const generators: string[] = [];
+    events.forEach(event => {
+      // Include generators from array
+      if (event.generators && event.generators.length > 0) {
+        event.generators.forEach((generator: any) => {
+          const generatorCode = typeof generator === 'object' ? generator.code || generator.name : generator;
+          if (generatorCode) generators.push(generatorCode);
+        });
+      } else if (event.generator) {
+        // Fallback to single generator
+        const generatorCode = typeof event.generator === 'object' ? (event.generator as any)?.name || (event.generator as any)?.code : event.generator;
+        if (generatorCode) generators.push(generatorCode);
+      }
+    });
+    return Array.from(new Set(generators)).sort();
   }, [events]);
 
   // Get counts for each event type
@@ -472,6 +720,9 @@ export function EventTableGuest({
   );
   const filteredSngs = uniqueSngs.filter(sng =>
       sng.toLowerCase().includes(sngSearchTerm.toLowerCase())
+  );
+  const filteredGenerators = uniqueGenerators.filter(generator =>
+      generator.toLowerCase().includes(generatorSearchTerm.toLowerCase())
   );
 
   // Local filter handlers - no need to sync with parent
@@ -495,6 +746,10 @@ export function EventTableGuest({
     setSelectedSngs(sngs);
   };
 
+  const handleGeneratorFilterChange = (generators: string[]) => {
+    setSelectedGenerators(generators);
+  };
+
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
     setShowDateRangePicker(false); // Close the picker after selection
@@ -507,12 +762,13 @@ export function EventTableGuest({
     setSelectedObs([]);
     setSelectedCities([]);
     setSelectedSngs([]);
+    setSelectedGenerators([]);
     setDateRange(undefined);
     setShowDateRangePicker(false);
     setSorting([]); // إعادة تعيين الفرز أيضاً
   };
 
-  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || dateRange || sorting.length > 0;
+  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || selectedGenerators.length > 0 || dateRange || sorting.length > 0;
 
   if (isLoading) {
     return (
@@ -734,6 +990,45 @@ export function EventTableGuest({
                             />
                             <Label htmlFor={`sng-${i}`} className="flex grow justify-between gap-2 font-normal">
                               {sng}
+                            </Label>
+                          </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Generator Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
+                    Generator
+                    {selectedGenerators.length > 0 && (
+                        <span className="-me-1 ms-3 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+                    {selectedGenerators.length}
+                  </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="min-w-36 p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground">Generators</div>
+                    <div className="space-y-3">
+                      {filteredGenerators.map((generator, i) => (
+                          <div key={generator} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`generator-${i}`}
+                                checked={selectedGenerators.includes(generator)}
+                                onCheckedChange={(checked: boolean) => {
+                                  const newGenerators = checked
+                                      ? [...selectedGenerators, generator]
+                                      : selectedGenerators.filter(g => g !== generator);
+                                  handleGeneratorFilterChange(newGenerators);
+                                }}
+                            />
+                            <Label htmlFor={`generator-${i}`} className="flex grow justify-between gap-2 font-normal">
+                              {generator}
                             </Label>
                           </div>
                       ))}

@@ -61,12 +61,18 @@ const convertBackendToFrontendEvent = (backendEvent: BackendEvent): Event => {
     date: formatDate(backendEvent.event_date),
     time: backendEvent.event_time,
     event: backendEvent.title,
-    eventType: backendEvent.event_type?.name || '-',
-    city: backendEvent.city?.name || '-',
-    venue: backendEvent.venue?.name || '-',
+    eventType: backendEvent.eventType || backendEvent.event_type || { name: backendEvent.eventType?.name || backendEvent.event_type?.name || '-' },
+    city: backendEvent.city || { name: backendEvent.city?.name || '-' },
+    venue: backendEvent.venue || { name: backendEvent.venue?.name || '-' },
     ob: backendEvent.observer?.code || '-',
     sng: backendEvent.sng?.code || '',
     generator: backendEvent.generator?.code || '',
+    // Include arrays for editing support
+    observers: backendEvent.observers || (backendEvent.observer ? [backendEvent.observer] : []),
+    sngs: backendEvent.sngs || (backendEvent.sng ? [backendEvent.sng] : []),
+    generators: backendEvent.generators || (backendEvent.generator ? [backendEvent.generator] : []),
+    // Include single objects for backward compatibility
+    observer: backendEvent.observer,
     createdAt: backendEvent.created_at,
     updatedAt: backendEvent.updated_at,
   };
@@ -84,7 +90,6 @@ const convertFrontendToBackendEvent = (frontendEvent: Event): BackendEvent => {
     event_type_id: 0, // Will be handled separately
     city_id: 0, // Will be handled separately
     venue_id: 0, // Will be handled separately
-    observer_id: 0, // Will be handled separately
     created_by: 1,
     description: '',
     status: 'scheduled',
@@ -92,12 +97,12 @@ const convertFrontendToBackendEvent = (frontendEvent: Event): BackendEvent => {
     metadata: [],
     created_at: frontendEvent.createdAt,
     updated_at: frontendEvent.updatedAt,
-    event_type: { id: 0, name: frontendEvent.eventType },
-    city: { id: 0, name: frontendEvent.city },
-    venue: { id: 0, name: frontendEvent.venue },
+    event_type: { id: 0, name: typeof frontendEvent.eventType === 'object' ? frontendEvent.eventType.name : frontendEvent.eventType },
+    city: { id: 0, name: typeof frontendEvent.city === 'object' ? frontendEvent.city.name : frontendEvent.city },
+    venue: { id: 0, name: typeof frontendEvent.venue === 'object' ? frontendEvent.venue.name : frontendEvent.venue },
     observer: { id: 0, code: frontendEvent.ob },
-    sng: { id: 0, code: frontendEvent.sng },
-    generator: { id: 0, code: frontendEvent.generator },
+    sng: { id: 0, code: typeof frontendEvent.sng === 'object' ? frontendEvent.sng?.code : frontendEvent.sng },
+    generator: { id: 0, code: typeof frontendEvent.generator === 'object' ? frontendEvent.generator?.code : frontendEvent.generator },
   };
 };
 
@@ -129,27 +134,64 @@ const convertEventForUpdate = (event: Event, dashboardData?: any) => {
       data.venue_id = venue.id;
     }
 
-    // Find observer ID
-    const observer = dashboardData.observers?.find((o: any) => o.code === event.ob);
-    if (observer) {
-      data.observer_id = observer.id;
+    // Find observer IDs (convert to many-to-many format)
+    const observer_ids: number[] = [];
+    
+    // Check for new array format first
+    if (event.observers && Array.isArray(event.observers)) {
+      event.observers.forEach((obs: any) => {
+        if (typeof obs === 'object' && obs.id) {
+          observer_ids.push(obs.id);
+        } else {
+          // If it's just a code/name, find the full object
+          const observer = dashboardData.observers?.find((o: any) => 
+            (o.code === obs) || (o.name === obs) || (o.code === obs.code) || (o.name === obs.name)
+          );
+          if (observer) {
+            observer_ids.push(observer.id);
+          }
+        }
+      });
     }
+    data.observer_ids = observer_ids;
 
-    // Find sng ID
-    if (event.sng) {
-      const sng = dashboardData.sngs?.find((s: any) => s.name === event.sng);
-      if (sng) {
-        data.sng_id = sng.id;
-      }
+    const sng_ids: number[] = [];
+    
+    if (event.sngs && Array.isArray(event.sngs)) {
+      event.sngs.forEach((sng: any) => {
+        if (typeof sng === 'object' && sng.id) {
+          sng_ids.push(sng.id);
+        } else {
+          const sngObj = dashboardData.sngs?.find((s: any) =>
+            (s.name === sng.code)
+          );
+          if (sngObj) {
+            sng_ids.push(sngObj.id);
+          }
+        }
+      });
     }
+    data.sng_ids = sng_ids;
 
-    // Find generator ID
-    if (event.generator) {
-      const generator = dashboardData.generators?.find((g: any) => g.name === event.generator);
-      if (generator) {
-        data.generator_id = generator.id;
-      }
+    const generator_ids: number[] = [];
+    
+    // Check for new array format first
+    if (event.generators && Array.isArray(event.generators)) {
+      event.generators.forEach((generator: any) => {
+        if (typeof generator === 'object' && generator.id) {
+          generator_ids.push(generator.id);
+        } else {
+          // If it's just a code/name, find the full object
+          const generatorObj = dashboardData.generators?.find((g: any) => 
+            (g.name === generator.code)
+          );
+          if (generatorObj) {
+            generator_ids.push(generatorObj.id);
+          }
+        }
+      });
     }
+    data.generator_ids = generator_ids;
   }
 
   return data;
@@ -225,6 +267,7 @@ const Index = () => {
     cities: filters.cities.length > 0 ? filters.cities : undefined,
     observers: filters.observers.length > 0 ? filters.observers : undefined,
     sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
+    generators: filters.generators.length > 0 ? filters.generators : undefined,
     dateRange: filters.dateRange ? {
       from: format(filters.dateRange.from, 'yyyy-MM-dd'),
       to: filters.dateRange.to ? format(filters.dateRange.to, 'yyyy-MM-dd') : format(filters.dateRange.from, 'yyyy-MM-dd')
@@ -409,7 +452,6 @@ const Index = () => {
 
   const handleAddEvent = (newEventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => {
     // TODO: Implement with backend API
-    console.log('Add event:', newEventData);
     toast({
       title: "Feature Coming Soon",
       description: "Event creation will be implemented next",
@@ -425,6 +467,8 @@ const Index = () => {
       eventTypes: filters.eventTypes.length > 0 ? filters.eventTypes : undefined,
       cities: filters.cities.length > 0 ? filters.cities : undefined,
       observers: filters.observers.length > 0 ? filters.observers : undefined,
+      sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
+      generators: filters.generators.length > 0 ? filters.generators : undefined,
       dateRange: filters.dateRange ? {
         from: format(filters.dateRange.from, 'yyyy-MM-dd'),
         to: format(filters.dateRange.to, 'yyyy-MM-dd')
@@ -472,7 +516,6 @@ const Index = () => {
 
   const handleEditEvent = (event: Event) => {
     // This is now handled by EditEventDialog in EventTableAdvanced
-    console.log('Edit event via old method:', event);
   };
 
   const handleUpdateEvent = async (updatedEvent: Event) => {
@@ -483,6 +526,8 @@ const Index = () => {
       eventTypes: filters.eventTypes.length > 0 ? filters.eventTypes : undefined,
       cities: filters.cities.length > 0 ? filters.cities : undefined,
       observers: filters.observers.length > 0 ? filters.observers : undefined,
+      sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
+      generators: filters.generators.length > 0 ? filters.generators : undefined,
       dateRange: filters.dateRange ? {
         from: format(filters.dateRange.from, 'yyyy-MM-dd'),
         to: format(filters.dateRange.to, 'yyyy-MM-dd')

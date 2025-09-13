@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Edit2 } from 'lucide-react';
@@ -33,9 +34,9 @@ export function EditEventDialog({
   const [eventType, setEventType] = useState('');
   const [city, setCity] = useState('');
   const [venue, setVenue] = useState('');
-  const [ob, setOb] = useState('');
-  const [sng, setSng] = useState('');
-  const [generator, setGenerator] = useState('');
+  const [observers, setObservers] = useState<string[]>([]);
+  const [sngs, setSngs] = useState<string[]>([]);
+  const [generators, setGenerators] = useState<string[]>([]);
   const [time, setTime] = useState('');
   
   // ✅ استخدام useUpdateEvent hook مباشرة
@@ -44,27 +45,68 @@ export function EditEventDialog({
   // Reset form when event changes
   useEffect(() => {
     if (event && isOpen) {
-      console.log('Event data in EditEventDialog:', event);
-      console.log('Event SNG:', event.sng);
-      setDate(new Date(event.date));
-      setEventName(event.event);
-      setEventType(event.eventType);
-      setCity(event.city);
-      setVenue(event.venue);
-      setOb(event.ob);
-      setSng(event.sng || '');
-      setGenerator(event.generator || '');
-      setTime(event.time);
+      setDate(new Date(event.event_date || event.date));
+      setEventName(event.title || event.event);
+      // Handle eventType - could be object or string
+      const eventTypeValue = typeof event.eventType === 'object' ? 
+        event.eventType?.name : 
+        (event.eventType || event.event_type);
+      setEventType(String(eventTypeValue || ''));
+      
+      // Handle city - could be object or string
+      const cityValue = typeof event.city === 'object' ? event.city?.name : event.city;
+      setCity(cityValue);
+      
+      // Handle venue - could be object or string
+      const venueValue = typeof event.venue === 'object' ? event.venue?.name : event.venue;
+      setVenue(venueValue);
+      
+      // Handle arrays for many-to-many relationships
+      
+      // For observers - handle both API response format and frontend format
+      let observerValues: string[] = [];
+      if (event.observers && Array.isArray(event.observers)) {
+        observerValues = event.observers.map((obs: any) => obs.code || obs.value || obs);
+      } else if (event.observer?.code) {
+        observerValues = [event.observer.code];
+      } else if (event.ob && event.ob !== '-') {
+        observerValues = [event.ob];
+      }
+      setObservers(observerValues);
+      
+      // For SNGs - handle both formats
+      let sngValues: string[] = [];
+      if (event.sngs && Array.isArray(event.sngs)) {
+        sngValues = event.sngs.map((sng: any) => sng.code || sng.value || sng);
+      } else if (event.sng && typeof event.sng === 'object' && 'code' in event.sng && event.sng.code) {
+        sngValues = [event.sng.code];
+      } else if (typeof event.sng === 'string' && event.sng !== '-' && event.sng !== '') {
+        sngValues = [event.sng];
+      }
+      setSngs(sngValues);
+      
+      // For generators - handle both formats
+      let generatorValues: string[] = [];
+      if (event.generators && Array.isArray(event.generators)) {
+        generatorValues = event.generators.map((gen: any) => gen.code || gen.value || gen);
+      } else if (event.generator && typeof event.generator === 'object' && 'code' in event.generator && event.generator.code) {
+        generatorValues = [event.generator.code];
+      } else if (typeof event.generator === 'string' && event.generator !== '-' && event.generator !== '') {
+        generatorValues = [event.generator];
+      }
+      setGenerators(generatorValues);
+      
+      setTime(event.event_time || event.time);
     }
   }, [event, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !eventName || !eventType || !city || !venue || !ob || !time || !sng || !generator) {
+    if (!date || !eventName || !eventType) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields (Date, Event Name, Event Type).",
         variant: "destructive",
       });
       return;
@@ -73,17 +115,26 @@ export function EditEventDialog({
     if (!event) return;
 
     try {
-      // ✅ استخدام React Query mutation مباشرة - تحويل الأسماء إلى IDs
+      // تحويل الأسماء إلى IDs
       const eventTypeId = dropdownConfig.eventTypes.find(et => et.value === eventType)?.id;
       const cityId = dropdownConfig.cities.find(c => c.value === city)?.id;
       const venueId = dropdownConfig.venues.find(v => v.value === venue)?.id;
-      const observerId = dropdownConfig.obs.find(o => o.value === ob)?.id;
-      const sngId = dropdownConfig.sngs?.find(s => s.value === sng)?.id;
-      const generatorId = dropdownConfig.generators?.find(g => g.value === generator)?.id;
-
-      console.log('Dropdown config SNGs:', dropdownConfig.sngs);
-      console.log('SNG value in form:', sng);
-      console.log('SNG ID found:', sngId);
+      
+      // Get IDs for multiple relationships
+      const observerIds = observers.map(obsCode => {
+        const found = dropdownConfig.obs.find(o => o.value === obsCode);
+        return found ? parseInt(found.id) : null;
+      }).filter(id => id !== null);
+      
+      const sngIds = sngs.map(sngCode => {
+        const found = dropdownConfig.sngs?.find(s => s.value === sngCode);
+        return found ? parseInt(found.id) : null;
+      }).filter(id => id !== null);
+      
+      const generatorIds = generators.map(genCode => {
+        const found = dropdownConfig.generators?.find(g => g.value === genCode);
+        return found ? parseInt(found.id) : null;
+      }).filter(id => id !== null);
 
       const updateData = {
         id: parseInt(event.id),
@@ -93,38 +144,36 @@ export function EditEventDialog({
         event_type_id: eventTypeId ? parseInt(eventTypeId) : undefined,
         city_id: cityId ? parseInt(cityId) : undefined,
         venue_id: venueId ? parseInt(venueId) : undefined,
-        observer_id: observerId ? parseInt(observerId) : undefined,
-        sng_id: sngId ? parseInt(sngId) : null,
-        generator_id: generatorId ? parseInt(generatorId) : null
+        observer_ids: observerIds,
+        sng_ids: sngIds,
+        generator_ids: generatorIds
       };
 
       console.log('Sending update data:', updateData);
-      console.log('SNG value:', sng);
-      console.log('SNG ID:', sngId);
-
+      
       await updateEventMutation.mutateAsync(updateData);
 
       // ✅ في حالة النجاح فقط - أغلق الـ dialog
       onClose();
       resetForm();
       
-      // ✅ استدعي onUpdateEvent للـ optimistic update في الجدول إذا كان موجود
-      if (onUpdateEvent) {
-        const updatedEvent: Event = {
-          ...event,
-          date: format(date, 'yyyy-MM-dd'),
-          event: eventName,
-          eventType,
-          city,
-          venue,
-          ob,
-          sng,
-          generator,
-          time,
-          updatedAt: new Date().toISOString(),
-        };
-        onUpdateEvent(updatedEvent);
-      }
+      // ✅ Optimistic update disabled temporarily to prevent double submission
+      // if (onUpdateEvent) {
+      //   const updatedEvent: Event = {
+      //     ...event,
+      //     date: format(date, 'yyyy-MM-dd'),
+      //     event: eventName,
+      //     eventType,
+      //     city,
+      //     venue,
+      //     ob: observers.join(', '),
+      //     sng: sngs.join(', '),
+      //     generator: generators.join(', '),
+      //     time,
+      //     updatedAt: new Date().toISOString(),
+      //   };
+      //   onUpdateEvent(updatedEvent);
+      // }
 
     } catch (error: any) {
       // ✅ الأخطاء يتم التعامل معها في useUpdateEvent hook
@@ -138,9 +187,9 @@ export function EditEventDialog({
     setEventType('');
     setCity('');
     setVenue('');
-    setOb('');
-    setSng('');
-    setGenerator('');
+    setObservers([]);
+    setSngs([]);
+    setGenerators([]);
     setTime('');
   };
 
@@ -257,51 +306,36 @@ export function EditEventDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ob">Ob *</Label>
-              <Select value={ob} onValueChange={setOb}>
-                <SelectTrigger className=" transition-all">
-                  <SelectValue placeholder="Select Ob" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dropdownConfig.obs.map((observer) => (
-                    <SelectItem key={observer.id} value={observer.value}>
-                      {observer.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="observers">Observers</Label>
+              <MultiSelect
+                options={dropdownConfig.obs}
+                selected={observers}
+                onSelectionChange={setObservers}
+                placeholder="Select observers (optional)"
+                className="transition-all"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sng">SNG *</Label>
-              <Select value={sng} onValueChange={setSng}>
-                <SelectTrigger className=" transition-all">
-                  <SelectValue placeholder="Select SNG *" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dropdownConfig.sngs?.map((sngOption) => (
-                    <SelectItem key={sngOption.id} value={sngOption.value}>
-                      {sngOption.label}
-                    </SelectItem>
-                  )) || []}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="sngs">SNG</Label>
+              <MultiSelect
+                options={dropdownConfig.sngs || []}
+                selected={sngs}
+                onSelectionChange={setSngs}
+                placeholder="Select SNGs (optional)"
+                className="transition-all"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="generator">Generator *</Label>
-              <Select value={generator} onValueChange={setGenerator}>
-                <SelectTrigger className=" transition-all">
-                  <SelectValue placeholder="Select Generator *" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dropdownConfig.generators?.map((generatorOption) => (
-                    <SelectItem key={generatorOption.id} value={generatorOption.value}>
-                      {generatorOption.label}
-                    </SelectItem>
-                  )) || []}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="generators">Generators</Label>
+              <MultiSelect
+                options={dropdownConfig.generators || []}
+                selected={generators}
+                onSelectionChange={setGenerators}
+                placeholder="Select generators (optional)"
+                className="transition-all"
+              />
             </div>
           </div>
           

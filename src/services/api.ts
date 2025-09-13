@@ -48,7 +48,8 @@ export interface BackendEvent {
   event_type_id: number;
   city_id: number;
   venue_id: number;
-  observer_id: number;
+  // Legacy single IDs (for backward compatibility)
+  observer_id?: number;
   sng_id?: number;
   generator_id?: number;
   created_by: number;
@@ -58,13 +59,22 @@ export interface BackendEvent {
   metadata?: any;
   created_at: string;
   updated_at: string;
-  // Relations
-  event_type?: { id: number; name: string; };
+  // Relations - both single and multiple
+  event_type?: { id: number; name: string; color?: string; };
+  eventType?: { id: number; name: string; color?: string; };
   city?: { id: number; name: string; };
   venue?: { id: number; name: string; };
+  
+  // New multi-relationship support
+  observers?: { id: number; code: string; }[];
+  sngs?: { id: number; code: string; }[];
+  generators?: { id: number; code: string; }[];
+  
+  // Legacy single relationships (for backward compatibility)
   observer?: { id: number; code: string; };
   sng?: { id: number; code: string; };
   generator?: { id: number; code: string; };
+  
   creator?: { id: number; name: string; };
 }
 
@@ -72,12 +82,26 @@ export interface CreateEventRequest {
   title: string;
   event_date: string;
   event_time: string;
-  event_type_id: number;
-  city_id: number;
-  venue_id: number;
-  observer_id: number;
+  event_type_id?: number;
+  event_type?: string; // Allow string for backward compatibility
+  city_id?: number;
+  city?: string; // Allow string for backward compatibility
+  venue_id?: number;
+  venue?: string; // Allow string for backward compatibility
+  
+  // New multi-select support
+  observers?: string[];
+  sngs?: string[];
+  generators?: string[];
+  
+  // Legacy single-select support
+  observer_id?: number;
   sng_id?: number;
   generator_id?: number;
+  observer?: string;
+  sng?: string;
+  generator?: string;
+  
   description?: string;
   teams?: string[];
   metadata?: any;
@@ -101,8 +125,39 @@ export interface EventsResponse {
 
 
 
-const API_BASE_URL = 'https://alamiya.konhub.dev/api/api';
-//const API_BASE_URL = 'http://localhost:8000/api';
+// Environment-based API URL configuration
+const isLocalDevelopment = () => {
+  // Check Vite environment variable first
+  if (import.meta.env.MODE === 'development') return true;
+  if (import.meta.env.PROD === false) return true;
+  
+  // Fallback to checking hostname and port
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' ||
+         hostname.startsWith('192.168.') ||
+         hostname.startsWith('10.') ||
+         port === '5173' || // Vite default port
+         port === '3000' ||  // Other common dev ports
+         port === '5174';    // Vite alternate port
+};
+
+// API URLs configuration
+const LOCAL_API_URL = 'http://localhost:8000/api';
+const PRODUCTION_API_URL = 'https://alamiya.konhub.dev/api/api';
+
+const API_BASE_URL = isLocalDevelopment() ? LOCAL_API_URL : PRODUCTION_API_URL;
+
+// Log the current environment for debugging
+console.log('🚀 API Environment:', {
+  isDevelopment: isLocalDevelopment(),
+  baseURL: API_BASE_URL,
+  hostname: window.location.hostname,
+  port: window.location.port,
+  viteMode: import.meta.env.MODE
+});
 
 class ApiClient {
   private getAuthHeaders(): Record<string, string> {
@@ -341,30 +396,38 @@ class ApiClient {
   }
 
   async createEvent(data: {
-    date: string;
-    time: string;
-    event: string;
-    eventType: string;
-    city: string;
-    venue: string;
-    ob: string;
-    sng: string;
-    generator: string;
+    // New multi-select format
+    title?: string;
+    event_date?: string;
+    event_time?: string;
+    event_type?: string;
+    city?: string;
+    venue?: string;
+    observers?: string[];
+    sngs?: string[];
+    generators?: string[];
+    // Legacy single-select format (for backward compatibility)
+    date?: string;
+    time?: string;
+    event?: string;
+    eventType?: string;
+    ob?: string;
+    sng?: string;
+    generator?: string;
   }): Promise<ApiResponse<BackendEvent>> {
     // Transform frontend data to match backend expectations
     const backendData = {
-      title: data.event,
-      event_date: data.date,
-      event_time: data.time,
-      event_type: data.eventType,
+      title: data.title || data.event,
+      event_date: data.event_date || data.date,
+      event_time: data.event_time || data.time,
+      event_type: data.event_type || data.eventType,
       city: data.city,
       venue: data.venue,
-      observer: data.ob,
-      sng: data.sng,
-      generator: data.generator,
+      // Support new multi-select format
+      observers: data.observers || (data.ob ? [data.ob] : []),
+      sngs: data.sngs || (data.sng ? [data.sng] : []),
+      generators: data.generators || (data.generator ? [data.generator] : []),
     };
-
-
 
     return this.fetchApi('/events', {
       method: 'POST',
@@ -372,10 +435,26 @@ class ApiClient {
     });
   }
 
-  async updateEvent(id: number, event: Partial<CreateEventRequest>): Promise<ApiResponse<BackendEvent>> {
+  async updateEvent(id: number, data: {
+    // New multi-select format for updates
+    title?: string;
+    event_date?: string;
+    event_time?: string;
+    event_type?: string;
+    city?: string;
+    venue?: string;
+    observer_ids?: number[];
+    sng_ids?: number[];
+    generator_ids?: number[];
+    // Legacy format support
+    observer_id?: number;
+    sng_id?: number;
+    generator_id?: number;
+    [key: string]: any; // Allow other fields
+  }): Promise<ApiResponse<BackendEvent>> {
     return this.fetchApi(`/events/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(event),
+      body: JSON.stringify(data),
     });
   }
 

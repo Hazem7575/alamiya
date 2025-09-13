@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Event extends Model
 {
@@ -17,9 +18,6 @@ class Event extends Model
         'event_type_id',
         'city_id',
         'venue_id',
-        'observer_id',
-        'sng_id',
-        'generator_id',
         'created_by',
         'description',
         'status',
@@ -49,19 +47,25 @@ class Event extends Model
         return $this->belongsTo(Venue::class);
     }
 
-    public function observer(): BelongsTo
+    public function observers(): BelongsToMany
     {
-        return $this->belongsTo(Observer::class);
+        return $this->belongsToMany(Observer::class, 'event_observers', 'event_id', 'observer_id')
+                    ->withTimestamps()
+                    ->withPivot('id');
     }
 
-    public function sng(): BelongsTo
+    public function sngs(): BelongsToMany
     {
-        return $this->belongsTo(Sng::class);
+        return $this->belongsToMany(Sng::class, 'event_sngs', 'event_id', 'sng_id')
+                    ->withTimestamps()
+                    ->withPivot('id');
     }
 
-    public function generator(): BelongsTo
+    public function generators(): BelongsToMany
     {
-        return $this->belongsTo(Generator::class);
+        return $this->belongsToMany(Generator::class, 'event_generators', 'event_id', 'generator_id')
+                    ->withTimestamps()
+                    ->withPivot('id');
     }
 
     public function creator(): BelongsTo
@@ -98,6 +102,57 @@ class Event extends Model
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
+    }
+
+    // دوال مساعدة للتوافق مع الكود الموجود (backward compatibility)
+    public function getObserverAttribute()
+    {
+        return $this->observers()->first();
+    }
+
+    public function getSngAttribute()
+    {
+        return $this->sngs()->first();
+    }
+
+    public function getGeneratorAttribute()
+    {
+        return $this->generators()->first();
+    }
+
+    // Backward compatibility for IDs
+    public function getObserverIdAttribute()
+    {
+        $observer = $this->observers()->first();
+        return $observer ? $observer->id : null;
+    }
+
+    public function getSngIdAttribute()
+    {
+        $sng = $this->sngs()->first();
+        return $sng ? $sng->id : null;
+    }
+
+    public function getGeneratorIdAttribute()
+    {
+        $generator = $this->generators()->first();
+        return $generator ? $generator->id : null;
+    }
+
+    // دوال للحصول على جميع العلاقات
+    public function getAllObserversAttribute()
+    {
+        return $this->observers;
+    }
+
+    public function getAllSngsAttribute()
+    {
+        return $this->sngs;
+    }
+
+    public function getAllGeneratorsAttribute()
+    {
+        return $this->generators;
     }
 
     // Broadcasting is handled in EventController for better reliability

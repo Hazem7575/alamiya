@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Observer extends Model
 {
@@ -16,9 +17,11 @@ class Observer extends Model
 
     protected $casts = [];
 
-    public function events(): HasMany
+    public function events(): BelongsToMany
     {
-        return $this->hasMany(Event::class);
+        return $this->belongsToMany(Event::class, 'event_observers', 'observer_id', 'event_id')
+                    ->withTimestamps()
+                    ->withPivot('id');
     }
 
     public function getUpcomingEventsAttribute()

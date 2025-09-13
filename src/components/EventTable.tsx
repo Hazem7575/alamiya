@@ -5,6 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { getEventTypeBadgeVariant } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface EventTableProps {
   events: Event[];
@@ -46,6 +51,8 @@ export function EventTable({ events }: EventTableProps) {
                 <th className="text-left py-3 px-4 font-semibold text-foreground">CITY</th>
                 <th className="text-left py-3 px-4 font-semibold text-foreground">VENUE</th>
                 <th className="text-left py-3 px-4 font-semibold text-foreground">OB</th>
+                <th className="text-left py-3 px-4 font-semibold text-foreground">SNG</th>
+                <th className="text-left py-3 px-4 font-semibold text-foreground">GEN</th>
               </tr>
             </thead>
             <tbody>
@@ -60,13 +67,124 @@ export function EventTable({ events }: EventTableProps) {
                   </td>
                   <td className="py-3 px-4 text-sm text-foreground font-medium">{event.event}</td>
                   <td className="py-3 px-4">
-                    <Badge variant={getEventTypeBadgeVariant(event.eventType)}>
-                      {event.eventType}
+                    <Badge variant={getEventTypeBadgeVariant(typeof event.eventType === 'object' ? event.eventType?.name : event.eventType)}>
+                      {typeof event.eventType === 'object' ? event.eventType?.name || '-' : event.eventType || '-'}
                     </Badge>
                   </td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{event.city}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{event.venue}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{event.ob}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
+                    {typeof event.city === 'object' ? event.city?.name || '-' : event.city || '-'}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
+                    {typeof event.venue === 'object' ? event.venue?.name || '-' : event.venue || '-'}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
+                    {event.observers && event.observers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {event.observers.slice(0, 2).map((observer: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {typeof observer === 'object' ? observer.code || observer.name || '-' : observer}
+                          </Badge>
+                        ))}
+                        {event.observers.length > 2 && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                +{event.observers.length - 2}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-2">
+                              <div className="space-y-1">
+                                <div className="text-xs font-medium text-muted-foreground mb-2">
+                                  All Ob ({event.observers.length})
+                                </div>
+                                <div className="flex flex-wrap gap-1 max-w-64">
+                                  {event.observers.map((observer: any, index: number) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {typeof observer === 'object' ? observer.code || observer.name || '-' : observer}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </div>
+                    ) : (
+                      (typeof event.observer === 'object' ? event.observer?.code : event.observer) || event.ob || '-'
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
+                    {event.sngs && event.sngs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {event.sngs.slice(0, 2).map((sng: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {typeof sng === 'object' ? sng.code || sng.name || '-' : sng}
+                          </Badge>
+                        ))}
+                        {event.sngs.length > 2 && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                +{event.sngs.length - 2}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-2">
+                              <div className="space-y-1">
+                                <div className="text-xs font-medium text-muted-foreground mb-2">
+                                  All SNGs ({event.sngs.length})
+                                </div>
+                                <div className="flex flex-wrap gap-1 max-w-64">
+                                  {event.sngs.map((sng: any, index: number) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {typeof sng === 'object' ? sng.code || sng.name || '-' : sng}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </div>
+                    ) : (
+                      (typeof event.sng === 'object' ? event.sng?.code : event.sng) || '-'
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
+                    {event.generators && event.generators.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {event.generators.slice(0, 1).map((generator: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {typeof generator === 'object' ? generator.code || generator.name || '-' : generator}
+                          </Badge>
+                        ))}
+                        {event.generators.length > 1 && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                +{event.generators.length - 1}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-2">
+                              <div className="space-y-1">
+                                <div className="text-xs font-medium text-muted-foreground mb-2">
+                                  All Generators ({event.generators.length})
+                                </div>
+                                <div className="flex flex-wrap gap-1 max-w-64">
+                                  {event.generators.map((generator: any, index: number) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {typeof generator === 'object' ? generator.code || generator.name || '-' : generator}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </div>
+                    ) : (
+                      (typeof event.generator === 'object' ? event.generator?.code : event.generator) || '-'
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

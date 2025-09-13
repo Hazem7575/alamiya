@@ -80,15 +80,20 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
 
   // Filter events based on search and filters
   const filteredEvents = events.filter(event => {
+    const eventTypeName = typeof event.eventType === 'object' ? event.eventType?.name : event.eventType;
+    const cityName = typeof event.city === 'object' ? event.city?.name : event.city;
+    const venueName = typeof event.venue === 'object' ? event.venue?.name : event.venue;
+    const sngName = typeof event.sng === 'object' ? event.sng?.name : event.sng;
+    
     const matchesSearch = searchTerm === '' ||
         event.event.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.venue.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesEventType = selectedEventTypes.length === 0 || selectedEventTypes.includes(event.eventType);
+        (cityName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (venueName || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesEventType = selectedEventTypes.length === 0 || selectedEventTypes.includes(eventTypeName);
     const matchesOb = selectedObs.length === 0 || selectedObs.includes(event.ob);
-    const matchesCity = selectedCities.length === 0 || selectedCities.includes(event.city);
-    const matchesSng = selectedSngs.length === 0 || selectedSngs.includes(event.sng);
+    const matchesCity = selectedCities.length === 0 || selectedCities.includes(cityName);
+    const matchesSng = selectedSngs.length === 0 || selectedSngs.includes(sngName);
 
     return matchesSearch && matchesEventType && matchesOb && matchesCity && matchesSng;
   });
@@ -110,17 +115,23 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
   };
 
   // Get unique values for filters
-  const uniqueEventTypes = [...new Set(events.map(e => e.eventType))];
-  const uniqueObs = [...new Set(events.map(e => e.ob))];
-  const uniqueCities = [...new Set(events.map(e => e.city))];
-  const uniqueSngs = [...new Set(events.map(e => e.sng))];
+  const uniqueEventTypes = [...new Set(events.map(e => 
+    typeof e.eventType === 'object' ? e.eventType?.name : e.eventType
+  ).filter(Boolean))];
+  const uniqueObs = [...new Set(events.map(e => e.ob).filter(Boolean))];
+  const uniqueCities = [...new Set(events.map(e => 
+    typeof e.city === 'object' ? e.city?.name : e.city
+  ).filter(Boolean))];
+  const uniqueSngs = [...new Set(events.map(e => 
+    typeof e.sng === 'object' ? e.sng?.name : e.sng
+  ).filter(Boolean))];
 
   // Filter options based on search
   const filteredEventTypes = uniqueEventTypes.filter(type =>
-      type.toLowerCase().includes(eventTypeSearchTerm.toLowerCase())
+      (type || '').toLowerCase().includes(eventTypeSearchTerm.toLowerCase())
   );
   const filteredObs = uniqueObs
-      .filter(ob => ob.toLowerCase().includes(obSearchTerm.toLowerCase()))
+      .filter(ob => (ob || '').toLowerCase().includes(obSearchTerm.toLowerCase()))
       .sort((a, b) => {
         // استخراج الرقم من النص
         const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
@@ -128,10 +139,10 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
         return numA - numB;
       });
   const filteredCities = uniqueCities.filter(city =>
-      city.toLowerCase().includes(citySearchTerm.toLowerCase())
+      (city || '').toLowerCase().includes(citySearchTerm.toLowerCase())
   );
   const filteredSngs = uniqueSngs
-      .filter(sng => sng.toLowerCase().includes(sngSearchTerm.toLowerCase()))
+      .filter(sng => (sng || '').toLowerCase().includes(sngSearchTerm.toLowerCase()))
       .sort((a, b) => {
         // استخراج الرقم من النص
         const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
@@ -244,12 +255,16 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
           {/* Events */}
           <div className="space-y-0.5">
             {(isDayExpanded ? dayEvents : dayEvents.slice(0, 2)).map((event) => {
-              const eventColors = getEventTypeColor(event.eventType, eventTypes);
+              const eventTypeName = typeof event.eventType === 'object' ? event.eventType?.name : event.eventType;
+              const cityName = typeof event.city === 'object' ? event.city?.name : event.city;
+              const sngName = typeof event.sng === 'object' ? event.sng?.name : event.sng;
+              
+              const eventColors = getEventTypeColor(eventTypeName, eventTypes);
               return (
                   <div
                       key={event.id}
                       className={`text-xs p-0 md:p-1 rounded-md ${eventColors.bg} border ${eventColors.border} shadow-sm cursor-pointer hover:shadow-md hover:border-opacity-80 transition-all duration-200 group`}
-                      title={`${event.event} - ${event.city}`}
+                      title={`${event.event} - ${cityName}`}
                       onClick={() => {
                         setSelectedEvent(event);
                         setPopupOpen(true);
@@ -261,10 +276,10 @@ export function MonthlyCalendar({ events, eventTypes = [] }: MonthlyCalendarProp
                   </span>
                     </div>
                     <div className="text-xs text-gray-600 mt-0.5 truncate text-left">
-                      {event.city}  {event.time}
+                      {cityName}  {event.time}
                     </div>
                     <div className="text-xs text-gray-600 mt-0.5 truncate text-left">
-                      {event.ob} • {event.sng}
+                      {event.ob} • {sngName}
                     </div>
                   </div>
               );

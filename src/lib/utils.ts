@@ -31,6 +31,11 @@ export type LightBadgeColor = typeof LIGHT_BADGE_COLORS[number];
  * Uses a hash function to ensure same string always gets same color
  */
 export function getLightBadgeColor(value: string): LightBadgeColor {
+  // Handle empty, null or undefined values
+  if (!value || typeof value !== 'string') {
+    return 'light_blue'; // default color
+  }
+  
   // Simple hash function to get consistent color for same string
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -48,6 +53,11 @@ export function getLightBadgeColor(value: string): LightBadgeColor {
  * Convert hex color to light badge color
  */
 function hexToLightBadgeColor(hexColor: string): LightBadgeColor {
+  // Handle invalid hex colors
+  if (!hexColor || typeof hexColor !== 'string') {
+    return 'light_blue';
+  }
+  
   // Map common hex colors to light badge colors
   const colorMap: { [key: string]: LightBadgeColor } = {
     '#3B82F6': 'light_blue',    // Blue
@@ -61,7 +71,7 @@ function hexToLightBadgeColor(hexColor: string): LightBadgeColor {
     '#EC4899': 'light_pink',    // Pink
     '#F97316': 'light_orange',  // Orange
     '#EAB308': 'light_yellow',  // Yellow
-    '#10B981': 'light_emerald', // Emerald
+    '#059669': 'light_emerald', // Emerald (different hex)
     '#F43F5E': 'light_rose',    // Rose
     '#64748B': 'light_slate',   // Slate
   };
@@ -73,16 +83,38 @@ function hexToLightBadgeColor(hexColor: string): LightBadgeColor {
  * Get event type badge variant using light colors
  * This replaces all the getEventTypeBadgeVariant functions in components
  */
-export function getEventTypeBadgeVariant(eventType: string, eventTypeData?: any): LightBadgeColor {
+export function getEventTypeBadgeVariant(eventType: string | any, eventTypeData?: any): LightBadgeColor {
+  // Handle undefined or null eventType
+  if (!eventType) {
+    return 'light_blue'; // default color
+  }
+  
+  // If eventType is an object, extract color and name
+  if (typeof eventType === 'object' && eventType) {
+    const color = eventType.color;
+    const name = eventType.name || '';
+    
+    if (color) {
+      if (LIGHT_BADGE_COLORS.includes(color as any)) {
+        return color as LightBadgeColor;
+      } else if (typeof color === 'string' && color.startsWith('#')) {
+        return hexToLightBadgeColor(color);
+      }
+    }
+    
+    // Use name for color generation
+    return getLightBadgeColor(name);
+  }
+  
   // If backend has a color stored, convert it to light badge color
   if (eventTypeData?.color) {
     if (LIGHT_BADGE_COLORS.includes(eventTypeData.color as any)) {
       return eventTypeData.color as LightBadgeColor;
-    } else if (eventTypeData.color.startsWith('#')) {
+    } else if (typeof eventTypeData.color === 'string' && eventTypeData.color.startsWith('#')) {
       return hexToLightBadgeColor(eventTypeData.color);
     }
   }
   
   // Otherwise use auto-generated color
-  return getLightBadgeColor(eventType);
+  return getLightBadgeColor(String(eventType));
 }

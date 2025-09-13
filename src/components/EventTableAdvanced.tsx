@@ -7,6 +7,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 // Note: Using real data passed as props instead of mockDropdownConfig
 import { AddEventDialog } from "@/components/AddEventDialog";
 import { EditEventDialog } from "@/components/EditEventDialog";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -227,6 +228,9 @@ export function EventTable({
   const inputRef = useRef<HTMLInputElement>(null);
   const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [editObservers, setEditObservers] = useState<string[]>([]);
+  const [editSngs, setEditSngs] = useState<string[]>([]);
+  const [editGenerators, setEditGenerators] = useState<string[]>([]);
   const [selectedObs, setSelectedObs] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
@@ -369,54 +373,55 @@ export function EventTable({
       cell: ({ row }) => {
         const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "eventType";
         return isEditing ? (
-          <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-8 w-full justify-between">
-                {editValue || row.getValue("eventType")}
-                <span className="ml-2">▼</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-0 bg-popover border border-border z-50">
-              <Command>
-                <CommandInput placeholder="Search event types..." />
-                <CommandList>
-                  <CommandEmpty>No event type found.</CommandEmpty>
-                  <CommandGroup>
-                    {eventTypes.map((type) => (
-                      <CommandItem
-                        key={type.id}
-                        value={type.name}
-                        onSelect={() => {
-                          setEditValue(type.name);
-                          handleSaveEdit(row.original, "eventType", type.name);
-                        }}
-                      >
-                        {type.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+            <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-8 w-full justify-between">
+                  {editValue || (typeof row.original.eventType === 'object' ? row.original.eventType?.name : row.original.eventType || '')}
+                  <span className="ml-2">▼</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-0 bg-popover border border-border z-50">
+                <Command>
+                  <CommandInput placeholder="Search event types..." />
+                  <CommandList>
+                    <CommandEmpty>No event type found.</CommandEmpty>
+                    <CommandGroup>
+                      {eventTypes.map((type) => (
+                          <CommandItem
+                              key={type.id}
+                              value={type.name}
+                              onSelect={() => {
+                                setEditValue(type.name);
+                                handleSaveEdit(row.original, "eventType", type.name);
+                              }}
+                          >
+                            {type.name}
+                          </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
         ) : (
-          <div 
-            className={`${canEditEvents() ? 'cursor-pointer hover:bg-[--hover-primary] border border-transparent hover:border-[--primary-brand]/20' : 'cursor-default border border-muted'} p-2 rounded-lg transition-all duration-300 hover:shadow-glow`}
-            onClick={() => canEditEvents() && handleStartEdit(row.id, "eventType", row.getValue("eventType"))}
-            title={canEditEvents() ? "Click to edit event type" : "No permission to edit"}
-          >
-            {(() => {
-              const eventTypeValue = row.getValue("eventType") as string;
-              const eventTypeData = eventTypes.find(et => et.name === eventTypeValue);
-              const variant = getEventTypeBadgeVariant(eventTypeValue, eventTypeData);
-              
-              return (
-                <Badge variant={variant}>
-                  {eventTypeValue}
-                </Badge>
-              );
-            })()}
-          </div>
+            <div
+                className={`${canEditEvents() ? 'cursor-pointer hover:bg-[--hover-primary] border border-transparent hover:border-[--primary-brand]/20' : 'cursor-default border border-muted'} p-2 rounded-lg transition-all duration-300 hover:shadow-glow`}
+                onClick={() => canEditEvents() && handleStartEdit(row.id, "eventType", typeof row.original.eventType === 'object' ? row.original.eventType?.name : row.original.eventType || '')}
+                title={canEditEvents() ? "Click to edit event type" : "No permission to edit"}
+            >
+              {(() => {
+                const eventType = row.original.eventType;
+                const eventTypeValue = typeof eventType === 'object' ? eventType?.name : eventType || '';
+                const eventTypeData = eventTypes.find(et => et.name === eventTypeValue);
+                const variant = getEventTypeBadgeVariant(eventType, eventTypeData);
+
+                return (
+                    <Badge variant={variant}>
+                      {eventTypeValue || '-'}
+                    </Badge>
+                );
+              })()}
+            </div>
         );
       },
       size: 150,
@@ -424,14 +429,14 @@ export function EventTable({
     },
     {
       header: "City",
-      accessorKey: "city",
+      accessorFn: (row) => typeof row.city === 'object' ? row.city?.name : row.city || '',
       cell: ({ row }) => {
         const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "city";
         return isEditing ? (
           <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-8 w-full justify-between">
-                {editValue || row.getValue("city")}
+                {editValue || (typeof row.original.city === 'object' ? row.original.city?.name : row.original.city || '')}
                 <span className="ml-2">▼</span>
               </Button>
             </PopoverTrigger>
@@ -461,10 +466,10 @@ export function EventTable({
         ) : (
           <div 
             className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
-            onClick={() => canEditEvents() && handleStartEdit(row.id, "city", row.getValue("city"))}
+            onClick={() => canEditEvents() && handleStartEdit(row.id, "city", typeof row.original.city === 'object' ? row.original.city?.name : row.original.city || '')}
             title={canEditEvents() ? "Click to edit city" : "No permission to edit"}
           >
-            {row.getValue("city")}
+            {typeof row.original.city === 'object' ? row.original.city?.name : row.original.city || ''}
           </div>
         );
       },
@@ -472,14 +477,14 @@ export function EventTable({
     },
     {
       header: "Venue",
-      accessorKey: "venue",
+      accessorFn: (row) => typeof row.venue === 'object' ? row.venue?.name : row.venue || '',
       cell: ({ row }) => {
         const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "venue";
         return isEditing ? (
           <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-8 w-full justify-between">
-                {editValue || row.getValue("venue")}
+                {editValue || (typeof row.original.venue === 'object' ? row.original.venue?.name : row.original.venue || '')}
                 <span className="ml-2">▼</span>
               </Button>
             </PopoverTrigger>
@@ -509,10 +514,10 @@ export function EventTable({
         ) : (
           <div 
             className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
-            onClick={() => canEditEvents() && handleStartEdit(row.id, "venue", row.getValue("venue"))}
+            onClick={() => canEditEvents() && handleStartEdit(row.id, "venue", typeof row.original.venue === 'object' ? row.original.venue?.name : row.original.venue || '')}
             title={canEditEvents() ? "Click to edit venue" : "No permission to edit"}
           >
-            {row.getValue("venue")}
+            {typeof row.original.venue === 'object' ? row.original.venue?.name : row.original.venue || ''}
           </div>
         );
       },
@@ -555,145 +560,334 @@ export function EventTable({
     },
     {
       header: "OB",
-      accessorKey: "ob",
+      accessorKey: "observers",
       cell: ({ row }) => {
-        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "ob";
-        return isEditing ? (
-          <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-8 w-full justify-between">
-                {editValue || row.getValue("ob")}
-                <span className="ml-2">▼</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-32 p-0 bg-popover border border-border z-50">
-              <Command>
-                <CommandInput placeholder="Search OB..." />
-                <CommandList>
-                  <CommandEmpty>No OB found.</CommandEmpty>
-                  <CommandGroup>
-                    {observers.map((ob) => (
-                      <CommandItem
-                        key={ob.id}
-                        value={ob.code}
-                        onSelect={() => {
-                          setEditValue(ob.code);
-                          handleSaveEdit(row.original, "ob", ob.code);
-                        }}
-                      >
-                        {ob.code}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        ) : (
-          <div 
-            className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
-            onClick={() => canEditEvents() && handleStartEdit(row.id, "ob", row.getValue("ob"))}
-            title={canEditEvents() ? "Click to edit Obs" : "No permission to edit"}
-          >
-            {row.getValue("ob")}
-          </div>
-        );
+        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "observers";
+        const currentObservers = row.original.observers; // Current selected observers for this event
+        const legacyOb = row.original.ob || (typeof row.original.observer === 'object' ? row.original.observer?.code : row.original.observer);
+        
+        if (isEditing) {
+          return (
+            <div className="w-full">
+              <MultiSelect
+                options={observers?.map((o: any) => ({ 
+                  id: o.id?.toString() || '0',
+                  value: o.code || o.name, 
+                  label: o.code || o.name 
+                })) || []}
+                selected={editObservers}
+                onSelectionChange={setEditObservers}
+                placeholder="Select observers..."
+                className="h-8 text-xs"
+              />
+              <div className="flex gap-1 mt-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleSaveObservers(row.original, editObservers)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Save
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleCancelEdit}
+                  className="h-6 px-2 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
+        // Display multiple observers as badges
+        if (currentObservers && currentObservers.length > 0) {
+          return (
+            <div 
+              className={`flex flex-wrap gap-1 max-w-32 ${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditObservers(row.id, currentObservers)}
+              title={canEditEvents() ? "Click to edit observers" : "No permission to edit"}
+            >
+              {currentObservers.slice(0, 2).map((observer: any, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs truncate">
+                  {typeof observer === 'object' ? observer.code || observer.name || '-' : observer}
+                </Badge>
+              ))}
+              {currentObservers.length > 2 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      +{currentObservers.length - 2}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">
+                        All Ob ({currentObservers.length})
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-w-64">
+                        {currentObservers.map((observer: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {typeof observer === 'object' ? observer.code || observer.name || '-' : observer}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          );
+        } else if (legacyOb) {
+          return (
+            <div 
+              className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditObservers(row.id, [])}
+              title={canEditEvents() ? "Click to edit observers" : "No permission to edit"}
+            >
+              <Badge variant="outline" className="text-xs">
+                {legacyOb}
+              </Badge>
+            </div>
+          );
+        } else {
+          return (
+            <div 
+              className={`text-muted-foreground ${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditObservers(row.id, [])}
+              title={canEditEvents() ? "Click to add observers" : "No permission to edit"}
+            >
+              -
+            </div>
+          );
+        }
       },
-      size: 100,
+      size: 120,
     },
     {
       header: "SNG",
-      accessorKey: "sng",
+      accessorKey: "sngs",
       cell: ({ row }) => {
-        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "sng";
-        return isEditing ? (
-          <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-8 w-full justify-between">
-                {editValue || row.getValue("sng")}
-                <span className="ml-2">▼</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-32 p-0 bg-popover border border-border z-50">
-              <Command>
-                <CommandInput placeholder="Search SNG..." />
-                <CommandList>
-                  <CommandEmpty>No SNG found.</CommandEmpty>
-                  <CommandGroup>
-                    {sngs.map((sng) => (
-                      <CommandItem
-                        key={sng.id}
-                        value={sng.name}
-                        onSelect={() => {
-                          setEditValue(sng.name);
-                          handleSaveEdit(row.original, "sng", sng.name);
-                        }}
-                      >
-                        {sng.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        ) : (
-          <div 
-            className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
-            onClick={() => canEditEvents() && handleStartEdit(row.id, "sng", row.getValue("sng"))}
-            title={canEditEvents() ? "Click to edit SNG" : "No permission to edit"}
-          >
-            {row.getValue("sng")}
-          </div>
-        );
+        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "sngs";
+        const currentSngs = row.original.sngs; // Current selected SNGs for this event
+        const legacySng = typeof row.original.sng === 'object' ? row.original.sng?.code : row.original.sng;
+        
+        if (isEditing) {
+          return (
+            <div className="w-full">
+              <MultiSelect
+                options={sngs?.map((s: any) => ({ 
+                  id: s.id?.toString() || '0',
+                  value: s.code || s.name, 
+                  label: s.code || s.name 
+                })) || []}
+                selected={editSngs}
+                onSelectionChange={setEditSngs}
+                placeholder="Select SNGs..."
+                className="h-8 text-xs"
+              />
+              <div className="flex gap-1 mt-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleSaveSngs(row.original, editSngs)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Save
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleCancelEdit}
+                  className="h-6 px-2 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
+        // Display multiple SNGs as badges
+        if (currentSngs && currentSngs.length > 0) {
+          return (
+            <div 
+              className={`flex flex-wrap gap-1 max-w-32 ${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditSngs(row.id, currentSngs)}
+              title={canEditEvents() ? "Click to edit SNGs" : "No permission to edit"}
+            >
+              {currentSngs.slice(0, 2).map((sng: any, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs truncate">
+                  {typeof sng === 'object' ? sng.code || sng.name || '-' : sng}
+                </Badge>
+              ))}
+              {currentSngs.length > 2 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      +{currentSngs.length - 2}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">
+                        All SNGs ({currentSngs.length})
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-w-64">
+                        {currentSngs.map((sng: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {typeof sng === 'object' ? sng.code || sng.name || '-' : sng}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          );
+        } else if (legacySng) {
+          return (
+            <div 
+              className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditSngs(row.id, [])}
+              title={canEditEvents() ? "Click to edit SNGs" : "No permission to edit"}
+            >
+              <Badge variant="outline" className="text-xs">
+                {legacySng}
+              </Badge>
+            </div>
+          );
+        } else {
+          return (
+            <div 
+              className={`text-muted-foreground ${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditSngs(row.id, [])}
+              title={canEditEvents() ? "Click to add SNGs" : "No permission to edit"}
+            >
+              -
+            </div>
+          );
+        }
       },
-      size: 100,
+      size: 120,
     },
     {
       header: "Generator",
-      accessorKey: "generator",
+      accessorKey: "generators",
       cell: ({ row }) => {
-        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "generator";
-        return isEditing ? (
-          <Popover open={true} onOpenChange={(open) => !open && handleCancelEdit()}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-8 w-full justify-between">
-                {editValue || row.getValue("generator")}
-                <span className="ml-2">▼</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-32 p-0 bg-popover border border-border z-50">
-              <Command>
-                <CommandInput placeholder="Search Generator..." />
-                <CommandList>
-                  <CommandEmpty>No Generator found.</CommandEmpty>
-                  <CommandGroup>
-                    {generators.map((generator) => (
-                      <CommandItem
-                        key={generator.id}
-                        value={generator.name}
-                        onSelect={() => {
-                          setEditValue(generator.name);
-                          handleSaveEdit(row.original, "generator", generator.name);
-                        }}
-                      >
-                        {generator.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        ) : (
-          <div 
-            className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
-            onClick={() => canEditEvents() && handleStartEdit(row.id, "generator", row.getValue("generator"))}
-            title={canEditEvents() ? "Click to edit Generator" : "No permission to edit"}
-          >
-            {row.getValue("generator")}
-          </div>
-        );
+        const isEditing = editingCell?.rowId === row.id && editingCell?.columnId === "generators";
+        const currentGenerators = row.original.generators; // Current selected generators for this event
+        const legacyGenerator = typeof row.original.generator === 'object' ? row.original.generator?.code : row.original.generator;
+        
+        if (isEditing) {
+          return (
+            <div className="w-full">
+              <MultiSelect
+                options={generators?.map((g: any) => ({ 
+                  id: g.id?.toString() || '0',
+                  value: g.code || g.name, 
+                  label: g.code || g.name 
+                })) || []}
+                selected={editGenerators}
+                onSelectionChange={setEditGenerators}
+                placeholder="Select generators..."
+                className="h-8 text-xs"
+              />
+              <div className="flex gap-1 mt-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleSaveGenerators(row.original, editGenerators)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Save
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleCancelEdit}
+                  className="h-6 px-2 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
+        // Display multiple generators as badges
+        if (currentGenerators && currentGenerators.length > 0) {
+          return (
+            <div 
+              className={`flex flex-wrap gap-1 max-w-28 ${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditGenerators(row.id, currentGenerators)}
+              title={canEditEvents() ? "Click to edit generators" : "No permission to edit"}
+            >
+              {currentGenerators.slice(0, 1).map((generator: any, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs truncate">
+                  {typeof generator === 'object' ? generator.code || generator.name || '-' : generator}
+                </Badge>
+              ))}
+              {currentGenerators.length > 1 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      +{currentGenerators.length - 1}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">
+                        All Generators ({currentGenerators.length})
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-w-64">
+                        {currentGenerators.map((generator: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {typeof generator === 'object' ? generator.code || generator.name || '-' : generator}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          );
+        } else if (legacyGenerator) {
+          return (
+            <div 
+              className={`${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditGenerators(row.id, [])}
+              title={canEditEvents() ? "Click to edit generators" : "No permission to edit"}
+            >
+              <Badge variant="outline" className="text-xs">
+                {legacyGenerator}
+              </Badge>
+            </div>
+          );
+        } else {
+          return (
+            <div 
+              className={`text-muted-foreground ${canEditEvents() ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'} p-1 rounded`}
+              onClick={() => canEditEvents() && handleStartEditGenerators(row.id, [])}
+              title={canEditEvents() ? "Click to add generators" : "No permission to edit"}
+            >
+              -
+            </div>
+          );
+        }
       },
       size: 100,
     },
@@ -758,6 +952,107 @@ export function EventTable({
   const handleCancelEdit = () => {
     setEditingCell(null);
     setEditValue("");
+    setEditObservers([]);
+    setEditSngs([]);
+    setEditGenerators([]);
+  };
+
+  const handleStartEditObservers = (rowId: string, currentObservers: any[]) => {
+    if (!canEditEvents()) {
+      return;
+    }
+    setEditingCell({ rowId, columnId: "observers" });
+    // Set current observers as selected
+    const observerCodes = currentObservers?.map((obs: any) => obs.code || obs) || [];
+    setEditObservers(observerCodes);
+  };
+
+  const handleStartEditSngs = (rowId: string, currentSngs: any[]) => {
+    if (!canEditEvents()) {
+      return;
+    }
+    setEditingCell({ rowId, columnId: "sngs" });
+    // Set current SNGs as selected
+    const sngCodes = currentSngs?.map((sng: any) => sng.code || sng) || [];
+    setEditSngs(sngCodes);
+  };
+
+  const handleStartEditGenerators = (rowId: string, currentGenerators: any[]) => {
+    if (!canEditEvents()) {
+      return;
+    }
+    setEditingCell({ rowId, columnId: "generators" });
+    // Set current generators as selected
+    const generatorCodes = currentGenerators?.map((gen: any) => gen.code || gen) || [];
+    setEditGenerators(generatorCodes);
+  };
+
+  const handleSaveObservers = (event: Event, selectedObservers: string[]) => {
+    if (!canEditEvents()) {
+      setEditingCell(null);
+      return;
+    }
+
+    if (onUpdateEvent) {
+      // Convert observer codes to objects for display
+      const observersArray = selectedObservers.map(code => ({ code }));
+      
+      const updatedEvent = {
+        ...event,
+        observers: observersArray,
+        // Keep original format for backward compatibility
+        ob: selectedObservers.join(', '),
+        updatedAt: new Date().toISOString()
+      };
+      onUpdateEvent(updatedEvent);
+    }
+    
+    setEditingCell(null);
+    setEditObservers([]);
+  };
+
+  const handleSaveSngs = (event: Event, selectedSngs: string[]) => {
+    if (!canEditEvents()) {
+      setEditingCell(null); // Cancel editing if no permission
+      return;
+    }
+    
+    if (onUpdateEvent) {
+      // Create updated event with new SNGs
+      const updatedEvent = { 
+        ...event, 
+        sngs: selectedSngs.map(code => ({ code })),
+        // Keep original format for backward compatibility
+        sng: selectedSngs.join(', '),
+        updatedAt: new Date().toISOString()
+      };
+      onUpdateEvent(updatedEvent);
+    }
+    
+    setEditingCell(null);
+    setEditSngs([]);
+  };
+
+  const handleSaveGenerators = (event: Event, selectedGenerators: string[]) => {
+    if (!canEditEvents()) {
+      setEditingCell(null); // Cancel editing if no permission
+      return;
+    }
+    
+    if (onUpdateEvent) {
+      // Create updated event with new generators
+      const updatedEvent = { 
+        ...event, 
+        generators: selectedGenerators.map(code => ({ code })),
+        // Keep original format for backward compatibility
+        generator: selectedGenerators.join(', '),
+        updatedAt: new Date().toISOString()
+      };
+      onUpdateEvent(updatedEvent);
+    }
+    
+    setEditingCell(null);
+    setEditGenerators([]);
   };
 
   // Edit modal handlers

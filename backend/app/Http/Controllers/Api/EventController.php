@@ -25,8 +25,7 @@ class EventController extends Controller
     use LogsActivity;
     public function index(Request $request): JsonResponse
     {
-        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator']);
-
+        $query = Event::with(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators', 'creator']);
         // Filter by date range
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->byDateRange($request->start_date, $request->end_date);
@@ -80,7 +79,7 @@ class EventController extends Controller
         // Filter by observers
         if ($request->has('observers') && !empty($request->observers)) {
             $observers = explode(',', $request->observers);
-            $query->whereHas('observer', function ($q) use ($observers) {
+            $query->whereHas('observers', function ($q) use ($observers) {
                 $q->whereIn('code', $observers);
             });
         }
@@ -88,7 +87,7 @@ class EventController extends Controller
         // Filter by SNGs
         if ($request->has('sngs') && !empty($request->sngs)) {
             $sngs = explode(',', $request->sngs);
-            $query->whereHas('sng', function ($q) use ($sngs) {
+            $query->whereHas('sngs', function ($q) use ($sngs) {
                 $q->whereIn('code', $sngs);
             });
         }
@@ -96,7 +95,7 @@ class EventController extends Controller
         // Filter by Generators
         if ($request->has('generators') && !empty($request->generators)) {
             $generators = explode(',', $request->generators);
-            $query->whereHas('generator', function ($q) use ($generators) {
+            $query->whereHas('generators', function ($q) use ($generators) {
                 $q->whereIn('code', $generators);
             });
         }
@@ -145,19 +144,34 @@ class EventController extends Controller
                           ->select('events.*');
                     break;
                 case 'ob':
-                    $query->join('observers', 'events.observer_id', '=', 'observers.id')
-                          ->orderBy('observers.code', $sortDirection)
-                          ->select('events.*');
+                    // Use subquery to avoid breaking eager loading with joins
+                    $query->orderByRaw("(
+                        SELECT observers.code
+                        FROM observers
+                        INNER JOIN event_observers ON observers.id = event_observers.observer_id
+                        WHERE event_observers.event_id = events.id
+                        LIMIT 1
+                    ) $sortDirection");
                     break;
                 case 'sng':
-                    $query->join('sngs', 'events.sng_id', '=', 'sngs.id')
-                          ->orderBy('sngs.code', $sortDirection)
-                          ->select('events.*');
+                    // Use subquery to avoid breaking eager loading with joins
+                    $query->orderByRaw("(
+                        SELECT sngs.code
+                        FROM sngs
+                        INNER JOIN event_sngs ON sngs.id = event_sngs.sng_id
+                        WHERE event_sngs.event_id = events.id
+                        LIMIT 1
+                    ) $sortDirection");
                     break;
                 case 'generator':
-                    $query->join('generators', 'events.generator_id', '=', 'generators.id')
-                          ->orderBy('generators.code', $sortDirection)
-                          ->select('events.*');
+                    // Use subquery to avoid breaking eager loading with joins
+                    $query->orderByRaw("(
+                        SELECT generators.code
+                        FROM generators
+                        INNER JOIN event_generators ON generators.id = event_generators.generator_id
+                        WHERE event_generators.event_id = events.id
+                        LIMIT 1
+                    ) $sortDirection");
                     break;
                 default:
                     $query->orderBy('event_date', 'desc')
@@ -170,7 +184,7 @@ class EventController extends Controller
                   ->orderBy('event_time', 'desc');
         }
 
-        $events = $query->with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator'])->paginate($perPage);
+        $events = $query->with(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators', 'creator'])->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -199,26 +213,49 @@ class EventController extends Controller
                 'title' => 'required|string|max:255',
                 'event_date' => 'required|date',
                 'event_time' => 'nullable|date_format:H:i',
-                'event_type' => 'required|string',
+
+                // Support both new and legacy formats
+                'event_type' => 'nullable|string',
+                'event_type_id' => 'nullable|integer|exists:event_types,id',
                 'city' => 'nullable|string',
+                'city_id' => 'nullable|integer|exists:cities,id',
                 'venue' => 'nullable|string',
-                'observer' => 'nullable|string',
-                'sng' => 'nullable|string',
-                'generator' => 'nullable|string',
+                'venue_id' => 'nullable|integer|exists:venues,id',
+
+                // New multi-select format
+                'observers' => 'nullable|array',
+                'observers.*' => 'string',
+                'sngs' => 'nullable|array',
+                'sngs.*' => 'string',
+                'generators' => 'nullable|array',
+                'generators.*' => 'string',
+
+                // Legacy single-select format (for backward compatibility)
+                'observer_id' => 'nullable|integer|exists:observers,id',
+                'sng_id' => 'nullable|integer|exists:sngs,id',
+                'generator_id' => 'nullable|integer|exists:generators,id',
+
                 'description' => 'nullable|string',
                 'teams' => 'nullable|array',
                 'metadata' => 'nullable|array'
             ]);
 
-            // Find or create event type
-            $eventType = EventType::firstOrCreate(['name' => $validated['event_type']], [
-                'code' => strtoupper(substr($validated['event_type'], 0, 3)),
-                'color' => '#' . substr(md5($validated['event_type']), 0, 6)
-            ]);
+            // Find or create event type (support both formats)
+            $eventType = null;
+            if (isset($validated['event_type_id'])) {
+                $eventType = EventType::find($validated['event_type_id']);
+            } else if (isset($validated['event_type'])) {
+                $eventType = EventType::firstOrCreate(['name' => $validated['event_type']], [
+                    'code' => strtoupper(substr($validated['event_type'], 0, 3)),
+                    'color' => '#' . substr(md5($validated['event_type']), 0, 6)
+                ]);
+            }
 
-            // Find or create city (optional)
+            // Find or create city (support both formats)
             $city = null;
-            if (!empty($validated['city'])) {
+            if (isset($validated['city_id'])) {
+                $city = City::find($validated['city_id']);
+            } else if (!empty($validated['city'])) {
                 $city = City::firstOrCreate(['name' => $validated['city']]);
             }
 
@@ -231,80 +268,134 @@ class EventController extends Controller
                 );
             }
 
-            // Find or create observer (optional)
-            $observer = null;
-            if (!empty($validated['observer'])) {
-                $observer = Observer::firstOrCreate(['code' => $validated['observer']]);
-            }
-
-            // Find or create SNG
-            $sng = null;
-            if (!empty($validated['sng'])) {
-                $sng = Sng::firstOrCreate(['code' => $validated['sng']]);
-            }
-
-            // Find or create Generator
-            $generator = null;
-            if (!empty($validated['generator'])) {
-                $generator = Generator::firstOrCreate(['code' => $validated['generator']]);
-            }
-
-            // Check OB conflicts before creating (only if observer and city are provided)
-            if ($observer && $city) {
-                $obConflictValidation = $this->validateObserverConflict(
-                    $observer->id,
-                    $validated['event_date'],
-                    $validated['event_time'] ?? '00:00',
-                    $city->id
-                );
-
-                if (!$obConflictValidation['valid']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $obConflictValidation['message'],
-                        'error_type' => 'observer_conflict',
-                        'details' => $obConflictValidation['details']
-                    ], 422);
+            // Handle observers - support both formats
+            $observers = [];
+            if (isset($validated['observer_id'])) {
+                // Legacy single ID format
+                $observer = Observer::find($validated['observer_id']);
+                if ($observer) {
+                    $observers[] = $observer;
+                }
+            } elseif (!empty($validated['observers'])) {
+                // New multi-select format
+                foreach ($validated['observers'] as $observerCode) {
+                    $observers[] = Observer::firstOrCreate(['code' => $observerCode]);
                 }
             }
 
-            // Check SNG conflicts before creating (if SNG and city are provided)
-            if ($sng && $city) {
-                $sngConflictValidation = $this->validateSngConflict(
-                    $sng->id,
-                    $validated['event_date'],
-                    $validated['event_time'] ?? '00:00',
-                    $city->id
-                );
-
-                if (!$sngConflictValidation['valid']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $sngConflictValidation['message'],
-                        'error_type' => 'sng_conflict',
-                        'details' => $sngConflictValidation['details']
-                    ], 422);
+            // Handle SNGs - support both formats
+            $sngs = [];
+            if (isset($validated['sng_id'])) {
+                // Legacy single ID format
+                $sng = Sng::find($validated['sng_id']);
+                if ($sng) {
+                    $sngs[] = $sng;
+                }
+            } elseif (!empty($validated['sngs'])) {
+                // New multi-select format
+                foreach ($validated['sngs'] as $sngCode) {
+                    $sngs[] = Sng::firstOrCreate(['code' => $sngCode]);
                 }
             }
 
-            // Create event with IDs
+            // Handle Generators - support both formats
+            $generators = [];
+            if (isset($validated['generator_id'])) {
+                // Legacy single ID format
+                $generator = Generator::find($validated['generator_id']);
+                if ($generator) {
+                    $generators[] = $generator;
+                }
+            } elseif (!empty($validated['generators'])) {
+                // New multi-select format
+                foreach ($validated['generators'] as $generatorCode) {
+                    $generators[] = Generator::firstOrCreate(['code' => $generatorCode]);
+                }
+            }
+
+            // Check conflicts for all observers
+            if (!empty($observers) && $city) {
+                foreach ($observers as $observer) {
+                    $obConflictValidation = $this->validateObserverConflict(
+                        $observer->id,
+                        $validated['event_date'],
+                        $validated['event_time'] ?? '00:00',
+                        $city->id
+                    );
+
+                    if (!$obConflictValidation['valid']) {
+                        $response = [
+                            'success' => false,
+                            'message' => "Observer {$observer->code}: " . $obConflictValidation['message'],
+                            'error_type' => 'observer_conflict'
+                        ];
+
+                        if (isset($obConflictValidation['details'])) {
+                            $response['details'] = $obConflictValidation['details'];
+                        }
+
+                        return response()->json($response, 422);
+                    }
+                }
+            }
+
+            // Check conflicts for all SNGs
+            if (!empty($sngs) && $city) {
+                foreach ($sngs as $sng) {
+                    $sngConflictValidation = $this->validateSngConflict(
+                        $sng->id,
+                        $validated['event_date'],
+                        $validated['event_time'] ?? '00:00',
+                        $city->id
+                    );
+
+                    if (!$sngConflictValidation['valid']) {
+                        $response = [
+                            'success' => false,
+                            'message' => "SNG {$sng->code}: " . $sngConflictValidation['message'],
+                            'error_type' => 'sng_conflict'
+                        ];
+
+                        if (isset($sngConflictValidation['details'])) {
+                            $response['details'] = $sngConflictValidation['details'];
+                        }
+
+                        return response()->json($response, 422);
+                    }
+                }
+            }
+
+            // Create event
             $event = Event::create([
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? '',
                 'event_date' => $validated['event_date'],
                 'event_time' => $validated['event_time'] ?? '00:00',
-                'event_type_id' => $eventType->id,
+                'event_type_id' => $eventType ? $eventType->id : null,
                 'city_id' => $city?->id,
                 'venue_id' => $venue?->id,
-                'observer_id' => $observer?->id,
-                'sng_id' => $sng?->id,
-                'generator_id' => $generator?->id,
                 'created_by' => auth()->id(),
                 'teams' => $validated['teams'] ?? [],
                 'metadata' => $validated['metadata'] ?? []
             ]);
 
-            $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'generator', 'creator']);
+            // Attach the many-to-many relationships
+            if (!empty($observers)) {
+                $observerIds = collect($observers)->pluck('id')->toArray();
+                $event->observers()->attach($observerIds);
+            }
+
+            if (!empty($sngs)) {
+                $sngIds = collect($sngs)->pluck('id')->toArray();
+                $event->sngs()->attach($sngIds);
+            }
+
+            if (!empty($generators)) {
+                $generatorIds = collect($generators)->pluck('id')->toArray();
+                $event->generators()->attach($generatorIds);
+            }
+
+            $event->load(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators', 'creator']);
             // Activity logging is handled automatically by ModelActivityObserver
 
             // Broadcast creation event from Controller for reliability
@@ -335,7 +426,7 @@ class EventController extends Controller
 
     public function show(Event $event): JsonResponse
     {
-        $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
+        $event->load(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators', 'creator']);
 
         return response()->json([
             'success' => true,
@@ -354,9 +445,12 @@ class EventController extends Controller
             'event_type_id' => 'sometimes|exists:event_types,id',
             'city_id' => 'sometimes|exists:cities,id',
             'venue_id' => 'sometimes|exists:venues,id',
-            'sng_id' => 'sometimes|exists:sngs,id',
-            'observer_id' => 'nullable|exists:observers,id',
-            'generator_id' => 'nullable|exists:generators,id',
+            'observer_ids' => 'sometimes|nullable|array',
+            'observer_ids.*' => 'exists:observers,id',
+            'sng_ids' => 'sometimes|nullable|array',
+            'sng_ids.*' => 'exists:sngs,id',
+            'generator_ids' => 'sometimes|nullable|array',
+            'generator_ids.*' => 'exists:generators,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:scheduled,ongoing,completed,cancelled,postponed',
             'teams' => 'nullable|array',
@@ -364,73 +458,115 @@ class EventController extends Controller
         ]);
 
         if (isset($validated['city_id']) && $validated['city_id'] != $event->city_id) {
+            $currentObserverIds = $event->observers()->pluck('observers.id')->toArray();
+            $observerIds = $validated['observer_ids'] ?? $currentObserverIds;
+
             $travelTimeValidation = $this->validateTravelTime(
                 $event->city_id,
                 $validated['city_id'],
                 $validated['event_date'] ?? $event->event_date,
                 $validated['event_time'] ?? $event->event_time,
-                $validated['observer_id'] ?? $event->observer_id,
+                !empty($observerIds) ? $observerIds[0] : null,
                 $event->id,
-                $validated['sng_id'] ?? $event->sng_id
+                !empty($validated['sng_ids']) ? $validated['sng_ids'][0] : null
             );
 
             if (!$travelTimeValidation['valid']) {
-                return response()->json([
+                $response = [
                     'success' => false,
                     'message' => $travelTimeValidation['message'],
-                    'error_type' => 'travel_time_insufficient',
-                    'details' => $travelTimeValidation['details']
-                ], 422);
+                    'error_type' => 'travel_time_insufficient'
+                ];
+
+                if (isset($travelTimeValidation['details'])) {
+                    $response['details'] = $travelTimeValidation['details'];
+                }
+
+                return response()->json($response, 422);
             }
         }
 
-        // Check OB conflicts even if city didn't change (in case observer or time changed)
-        if (isset($validated['observer_id']) || isset($validated['event_time']) || isset($validated['event_date'])) {
-            $obConflictValidation = $this->validateObserverConflict(
-                $validated['observer_id'] ?? $event->observer_id,
-                $validated['event_date'] ?? $event->event_date,
-                $validated['event_time'] ?? $event->event_time,
-                $validated['city_id'] ?? $event->city_id,
-                $event->id
-            );
+        if (isset($validated['observer_ids']) || isset($validated['event_time']) || isset($validated['event_date'])) {
+            $currentObserverIds = $event->observers()->pluck('observers.id')->toArray();
+            $observerIds = $validated['observer_ids'] ?? $currentObserverIds;
 
-            if (!$obConflictValidation['valid']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $obConflictValidation['message'],
-                    'error_type' => 'observer_conflict',
-                    'details' => $obConflictValidation['details']
-                ], 422);
-            }
-        }
+            if (!empty($observerIds)) {
+                foreach ($observerIds as $observerId) {
+                    $obConflictValidation = $this->validateObserverConflict(
+                        $observerId,
+                        $validated['event_date'] ?? $event->event_date,
+                        $validated['event_time'] ?? $event->event_time,
+                        $validated['city_id'] ?? $event->city_id,
+                        $event->id
+                    );
 
-        // Check SNG conflicts even if city didn't change (in case sng or time changed)
-        if (isset($validated['sng_id']) || isset($validated['event_time']) || isset($validated['event_date'])) {
-            $sngId = $validated['sng_id'] ?? $event->sng_id;
-            if ($sngId) {
-                $sngConflictValidation = $this->validateSngConflict(
-                    $sngId,
-                    $validated['event_date'] ?? $event->event_date,
-                    $validated['event_time'] ?? $event->event_time,
-                    $validated['city_id'] ?? $event->city_id,
-                    $event->id
-                );
+                    if (!$obConflictValidation['valid']) {
+                        $response = [
+                            'success' => false,
+                            'message' => $obConflictValidation['message'],
+                            'error_type' => 'observer_conflict'
+                        ];
 
-                if (!$sngConflictValidation['valid']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $sngConflictValidation['message'],
-                        'error_type' => 'sng_conflict',
-                        'details' => $sngConflictValidation['details']
-                    ], 422);
+                        if (isset($obConflictValidation['details'])) {
+                            $response['details'] = $obConflictValidation['details'];
+                        }
+
+                        return response()->json($response, 422);
+                    }
                 }
             }
         }
 
-        $event->update($validated);
-        $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'creator']);
+        // Check SNG conflicts even if city didn't change (in case sng or time changed)
+        if (isset($validated['sng_ids']) || isset($validated['event_time']) || isset($validated['event_date'])) {
+            $currentSngIds = $event->sngs()->pluck('sngs.id')->toArray();
+            $sngIds = $validated['sng_ids'] ?? $currentSngIds;
 
-        // Activity logging is handled automatically by ModelActivityObserver
+            if (!empty($sngIds)) {
+                foreach ($sngIds as $sngId) {
+                    $sngConflictValidation = $this->validateSngConflict(
+                        $sngId,
+                        $validated['event_date'] ?? $event->event_date,
+                        $validated['event_time'] ?? $event->event_time,
+                        $validated['city_id'] ?? $event->city_id,
+                        $event->id
+                    );
+
+                    if (!$sngConflictValidation['valid']) {
+                        $response = [
+                            'success' => false,
+                            'message' => $sngConflictValidation['message'],
+                            'error_type' => 'sng_conflict'
+                        ];
+
+                        if (isset($sngConflictValidation['details'])) {
+                            $response['details'] = $sngConflictValidation['details'];
+                        }
+
+                        return response()->json($response, 422);
+                    }
+                }
+            }
+        }
+
+        // Update basic event data (excluding relationship fields)
+        $updateData = collect($validated)->except(['observer_ids', 'sng_ids', 'generator_ids'])->toArray();
+        $event->update($updateData);
+
+        if (isset($validated['observer_ids'])) {
+            $event->observers()->sync($validated['observer_ids'] ?? []);
+        }
+
+        if (isset($validated['sng_ids'])) {
+            $event->sngs()->sync($validated['sng_ids'] ?? []);
+        }
+
+        if (isset($validated['generator_ids'])) {
+            $event->generators()->sync($validated['generator_ids'] ?? []);
+        }
+
+
+        $event->load(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators', 'creator']);
 
         // Broadcast update event
         broadcast(new EventUpdated($event, 'updated'))->toOthers();
@@ -535,7 +671,7 @@ class EventController extends Controller
     public function destroy(Event $event): JsonResponse
     {
         // Load relationships before deletion to ensure data is available for broadcasting
-        $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observer', 'sng', 'generator']);
+        $eventWithRelations = $event->load(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators']);
 
         // Convert to array to avoid model serialization issues
         $eventData = $eventWithRelations->toArray();
@@ -606,7 +742,7 @@ class EventController extends Controller
     // Public methods for guest access
     public function publicIndex(Request $request): JsonResponse
     {
-        $query = Event::with(['eventType', 'city', 'venue', 'observer', 'sng', 'generator'])
+        $query = Event::with(['eventType', 'city', 'venue', 'observers', 'sngs', 'generators'])
             ->where('status', 'scheduled'); // Only show scheduled events for guests
 
         // Filter by date range
@@ -657,7 +793,7 @@ class EventController extends Controller
         // Filter by observers
         if ($request->has('observers') && !empty($request->observers)) {
             $observers = explode(',', $request->observers);
-            $query->whereHas('observer', function ($q) use ($observers) {
+            $query->whereHas('observers', function ($q) use ($observers) {
                 $q->whereIn('code', $observers);
             });
         }
@@ -702,19 +838,34 @@ class EventController extends Controller
                           ->select('events.*');
                     break;
                 case 'ob':
-                    $query->join('observers', 'events.observer_id', '=', 'observers.id')
-                          ->orderBy('observers.code', $sortDirection)
-                          ->select('events.*');
+                    // Use subquery to avoid breaking eager loading with joins
+                    $query->orderByRaw("(
+                        SELECT observers.code
+                        FROM observers
+                        INNER JOIN event_observers ON observers.id = event_observers.observer_id
+                        WHERE event_observers.event_id = events.id
+                        LIMIT 1
+                    ) $sortDirection");
                     break;
                 case 'sng':
-                    $query->join('sngs', 'events.sng_id', '=', 'sngs.id')
-                          ->orderBy('sngs.code', $sortDirection)
-                          ->select('events.*');
+                    // Use subquery to avoid breaking eager loading with joins
+                    $query->orderByRaw("(
+                        SELECT sngs.code
+                        FROM sngs
+                        INNER JOIN event_sngs ON sngs.id = event_sngs.sng_id
+                        WHERE event_sngs.event_id = events.id
+                        LIMIT 1
+                    ) $sortDirection");
                     break;
                 case 'generator':
-                    $query->join('generators', 'events.generator_id', '=', 'generators.id')
-                          ->orderBy('generators.code', $sortDirection)
-                          ->select('events.*');
+                    // Use subquery to avoid breaking eager loading with joins
+                    $query->orderByRaw("(
+                        SELECT generators.code
+                        FROM generators
+                        INNER JOIN event_generators ON generators.id = event_generators.generator_id
+                        WHERE event_generators.event_id = events.id
+                        LIMIT 1
+                    ) $sortDirection");
                     break;
                 default:
                     $query->orderBy('event_date', 'desc')
@@ -826,7 +977,9 @@ class EventController extends Controller
                 Carbon::parse($eventDate)->format('Y-m-d') :
                 $eventDate;
 
-            $query = Event::where('sng_id', $sngId)
+            $query = Event::whereHas('sngs', function($q) use ($sngId) {
+                    $q->where('sngs.id', $sngId);
+                })
                 ->whereDate('event_date', $dateOnly);
 
             if ($currentEventId) {
@@ -984,7 +1137,9 @@ class EventController extends Controller
                 Carbon::parse($eventDate)->format('Y-m-d') :
                 $eventDate;
 
-            $query = Event::where('observer_id', $observerId)
+            $query = Event::whereHas('observers', function($q) use ($observerId) {
+                    $q->where('observers.id', $observerId);
+                })
                 ->whereDate('event_date', $dateOnly);
 
             if ($currentEventId) {

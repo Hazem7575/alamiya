@@ -227,6 +227,7 @@ interface EventFilters {
   cities?: string[];
   observers?: string[];
   sngs?: string[];
+  generators?: string[];
   dateRange?: { from: string; to: string } | null;
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
@@ -253,16 +254,38 @@ export function useCreateEvent() {
   
   return useMutation({
     mutationFn: (data: {
-      date: string;
-      time: string;
-      event: string;
-      eventType: string;
-      city: string;
-      venue: string;
-      ob: string;
-      sng: string;
-      generator: string;
-    }) => apiClient.createEvent(data),
+      title?: string;
+      event_date?: string;
+      event_time?: string;
+      event_type?: string;
+      city?: string;
+      venue?: string;
+      observers?: string[];
+      sngs?: string[];
+      generators?: string[];
+      // Legacy fields for backwards compatibility
+      date?: string;
+      time?: string;
+      event?: string;
+      eventType?: string;
+      ob?: string;
+      sng?: string;
+      generator?: string;
+    }) => {
+      // Transform legacy data to new format
+      const transformedData = {
+        title: data.title || data.event,
+        event_date: data.event_date || data.date,
+        event_time: data.event_time || data.time,
+        event_type: data.event_type || data.eventType,
+        city: data.city,
+        venue: data.venue,
+        observers: data.observers || (data.ob ? [data.ob] : []),
+        sngs: data.sngs || (data.sng ? [data.sng] : []),
+        generators: data.generators || (data.generator ? [data.generator] : []),
+      };
+      return apiClient.createEvent(transformedData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });

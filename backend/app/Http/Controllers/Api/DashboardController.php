@@ -50,7 +50,7 @@ class DashboardController extends Controller
             ->get();
 
         // Upcoming events (next 7 days)
-        $upcomingEvents = Event::with(['eventType', 'city', 'venue', 'observer'])
+        $upcomingEvents = Event::with(['eventType', 'city', 'venue', 'observers'])
             ->whereBetween('event_date', [$today, $today->copy()->addDays(7)])
             ->orderBy('event_date')
             ->orderBy('event_time')

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Plus } from 'lucide-react';
@@ -35,9 +36,9 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
   const [eventType, setEventType] = useState('');
   const [city, setCity] = useState('');
   const [venue, setVenue] = useState('');
-  const [ob, setOb] = useState('');
-  const [sng, setSng] = useState('');
-  const [generator, setGenerator] = useState('');
+  const [observers, setObservers] = useState<string[]>([]);
+  const [sngs, setSngs] = useState<string[]>([]);
+  const [generators, setGenerators] = useState<string[]>([]);
   const [time, setTime] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,15 +64,15 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
     }
 
     const eventData = {
-      date: format(date, 'yyyy-MM-dd'),
-      time: time || '00:00',
-      event: eventName,
-      eventType: eventType,
+      title: eventName,
+      event_date: format(date, 'yyyy-MM-dd'),
+      event_time: time || '00:00',
+      event_type: eventType,
       city: city || '',
       venue: venue || '',
-      ob: ob || '',
-      sng: sng || '',
-      generator: generator || '',
+      observers: observers,
+      sngs: sngs,
+      generators: generators,
     };
 
     try {
@@ -88,9 +89,9 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
       setEventType('');
       setCity('');
       setVenue('');
-      setOb('');
-      setSng('');
-      setGenerator('');
+      setObservers([]);
+      setSngs([]);
+      setGenerators([]);
       setTime('');
       setOpen(false);
     } catch (error) {
@@ -216,54 +217,36 @@ export function AddEventDialog({ dropdownConfig, onAddEvent, children }: AddEven
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ob">OB</Label>
-            <Select value={ob} onValueChange={setOb}>
-              <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select OB (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {dropdownConfig.obs.map((obOption) => (
-                  <SelectItem key={obOption.id} value={obOption.value}>
-                    {obOption.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
+            <Label htmlFor="observers">Ob</Label>
+            <MultiSelect
+              options={dropdownConfig.obs}
+              selected={observers}
+              onSelectionChange={setObservers}
+              placeholder="Select ob (optional)"
+              className="transition-all"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sng">SNG</Label>
-            <Select value={sng} onValueChange={setSng}>
-              <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select SNG (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {dropdownConfig.sngs?.map((sngOption) => (
-                  <SelectItem key={sngOption.id} value={sngOption.value}>
-                    {sngOption.label}
-                  </SelectItem>
-                )) || []}
-              </SelectContent>
-            </Select>
-
+            <Label htmlFor="sngs">SNG</Label>
+            <MultiSelect
+              options={dropdownConfig.sngs || []}
+              selected={sngs}
+              onSelectionChange={setSngs}
+              placeholder="Select SNGs (optional)"
+              className="transition-all"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="generator">Generator</Label>
-            <Select value={generator} onValueChange={setGenerator}>
-              <SelectTrigger className=" transition-all">
-                <SelectValue placeholder="Select Generator (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {dropdownConfig.generators?.map((generatorOption) => (
-                  <SelectItem key={generatorOption.id} value={generatorOption.value}>
-                    {generatorOption.label}
-                  </SelectItem>
-                )) || []}
-              </SelectContent>
-            </Select>
-
+            <Label htmlFor="generators">Generators</Label>
+            <MultiSelect
+              options={dropdownConfig.generators || []}
+              selected={generators}
+              onSelectionChange={setGenerators}
+              placeholder="Select generators (optional)"
+              className="transition-all"
+            />
           </div>
           </div>
           
