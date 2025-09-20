@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { ModernDateRangePicker } from "@/components/ui/ModernDateRangePicker";
 import {
   Command,
@@ -191,7 +191,15 @@ export function EventTableGuest({
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
   const [selectedGenerators, setSelectedGenerators] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  
+  // Set default date range to "next 30 days"
+  const getNext30DaysRange = () => {
+    const today = new Date();
+    return { from: today, to: addDays(today, 29) };
+  };
+  
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(getNext30DaysRange());
+  const [isDefaultDateRange, setIsDefaultDateRange] = useState(true);
 
   // Search terms for filter dropdowns
   const [eventTypeSearchTerm, setEventTypeSearchTerm] = useState("");
@@ -752,6 +760,7 @@ export function EventTableGuest({
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
+    setIsDefaultDateRange(false); // Mark as no longer using default
     setShowDateRangePicker(false); // Close the picker after selection
   };
 
@@ -763,12 +772,13 @@ export function EventTableGuest({
     setSelectedCities([]);
     setSelectedSngs([]);
     setSelectedGenerators([]);
-    setDateRange(undefined);
+    setDateRange(getNext30DaysRange()); // Reset to default next 30 days
+    setIsDefaultDateRange(true); // Mark as using default
     setShowDateRangePicker(false);
     setSorting([]); // إعادة تعيين الفرز أيضاً
   };
 
-  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || selectedGenerators.length > 0 || dateRange || sorting.length > 0;
+  const hasActiveFilters = globalFilter || selectedEventTypes.length > 0 || selectedObs.length > 0 || selectedCities.length > 0 || selectedSngs.length > 0 || selectedGenerators.length > 0 || (!isDefaultDateRange && dateRange) || sorting.length > 0;
 
   if (isLoading) {
     return (
@@ -903,11 +913,13 @@ export function EventTableGuest({
                 <PopoverTrigger asChild>
                   <Button variant="outline">
                     <CalendarIcon className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} />
-                    {dateRange?.from && dateRange?.to
-                        ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-                        : dateRange?.from
-                            ? format(dateRange.from, "MMM dd")
-                            : "Date Range"
+                    {isDefaultDateRange && dateRange?.from && dateRange?.to 
+                        ? "Next 30 days"
+                        : dateRange?.from && dateRange?.to
+                            ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                            : dateRange?.from
+                                ? format(dateRange.from, "MMM dd")
+                                : "Date Range"
                     }
                   </Button>
                 </PopoverTrigger>

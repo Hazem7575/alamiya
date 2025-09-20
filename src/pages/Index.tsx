@@ -283,7 +283,8 @@ const Index = () => {
     observers: filters.observers.length > 0 ? filters.observers : undefined,
     sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
     generators: filters.generators.length > 0 ? filters.generators : undefined,
-    dateRange: filters.dateRange ? {
+    // Only apply date range filter for table view, not for calendar views
+    dateRange: (currentView === 'table' && filters.dateRange) ? {
       from: format(filters.dateRange.from, 'yyyy-MM-dd'),
       to: filters.dateRange.to ? format(filters.dateRange.to, 'yyyy-MM-dd') : format(filters.dateRange.from, 'yyyy-MM-dd')
     } : undefined,
@@ -484,7 +485,8 @@ const Index = () => {
       observers: filters.observers.length > 0 ? filters.observers : undefined,
       sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
       generators: filters.generators.length > 0 ? filters.generators : undefined,
-      dateRange: filters.dateRange ? {
+      // Only apply date range filter for table view, not for calendar views
+      dateRange: (currentView === 'table' && filters.dateRange) ? {
         from: format(filters.dateRange.from, 'yyyy-MM-dd'),
         to: format(filters.dateRange.to, 'yyyy-MM-dd')
       } : undefined,
@@ -543,7 +545,8 @@ const Index = () => {
       observers: filters.observers.length > 0 ? filters.observers : undefined,
       sngs: filters.sngs.length > 0 ? filters.sngs : undefined,
       generators: filters.generators.length > 0 ? filters.generators : undefined,
-      dateRange: filters.dateRange ? {
+      // Only apply date range filter for table view, not for calendar views
+      dateRange: (currentView === 'table' && filters.dateRange) ? {
         from: format(filters.dateRange.from, 'yyyy-MM-dd'),
         to: format(filters.dateRange.to, 'yyyy-MM-dd')
       } : undefined,
