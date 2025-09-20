@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addDays } from "date-fns";
+import { format, addDays, startOfDay } from "date-fns";
 import { ModernDateRangePicker } from "@/components/ui/ModernDateRangePicker";
 import {
   Command,
@@ -192,9 +192,9 @@ export function EventTableGuest({
   const [selectedSngs, setSelectedSngs] = useState<string[]>([]);
   const [selectedGenerators, setSelectedGenerators] = useState<string[]>([]);
   
-  // Set default date range to "next 30 days"
+  // Set default date range to "next 30 days" starting from beginning of today
   const getNext30DaysRange = () => {
-    const today = new Date();
+    const today = startOfDay(new Date()); // Start from beginning of today (00:00:00)
     return { from: today, to: addDays(today, 29) };
   };
   
@@ -772,7 +772,7 @@ export function EventTableGuest({
     setSelectedCities([]);
     setSelectedSngs([]);
     setSelectedGenerators([]);
-    setDateRange(getNext30DaysRange()); // Reset to default next 30 days
+    setDateRange(getNext30DaysRange()); // Reset to default next 30 days from today
     setIsDefaultDateRange(true); // Mark as using default
     setShowDateRangePicker(false);
     setSorting([]); // إعادة تعيين الفرز أيضاً
